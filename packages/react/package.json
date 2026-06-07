@@ -1,0 +1,39 @@
+{
+  "name": "@intermact/react",
+  "version": "0.1.0",
+  "description": "React bindings: IntermactCanvas, hooks (useIntermactPlayer, useSignal, useProgram).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@intermact/core": "workspace:*",
+    "@intermact/render-r3f": "workspace:*"
+  },
+  "peerDependencies": {
+    "@react-three/fiber": ">=8.0.0",
+    "react": ">=18.0.0",
+    "three": ">=0.160.0"
+  },
+  "devDependencies": {
+    "@react-three/fiber": "^9.0.0",
+    "@types/react": "^19.0.2",
+    "@types/three": "^0.171.0",
+    "react": "^19.0.0",
+    "three": "^0.171.0"
+  }
+}

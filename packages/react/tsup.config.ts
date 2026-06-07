@@ -1,0 +1,20 @@
+import { defineConfig } from "tsup";
+
+export default defineConfig({
+  entry: ["src/index.ts"],
+  format: ["esm"],
+  dts: true,
+  sourcemap: true,
+  clean: true,
+  target: "es2022",
+  treeshake: true,
+  external: [
+    "react",
+    "react-dom",
+    "three",
+    "@react-three/fiber",
+    "@intermact/core",
+    "@intermact/render-r3f",
+    "@intermact/render-three",
+  ],
+});
