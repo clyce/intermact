@@ -50,6 +50,19 @@ export function composeTransform2D(
   };
 }
 
+/** Map a world point into a transform's local space (inverse TRS). */
+export function worldPointToLocal(t: ResolvedTransform2D, world: AbsXY): AbsXY {
+  const dx = world[0] - t.position[0];
+  const dy = world[1] - t.position[1];
+  const cos = Math.cos(-t.rotation);
+  const sin = Math.sin(-t.rotation);
+  const rx = cos * dx - sin * dy;
+  const ry = sin * dx + cos * dy;
+  const sx = t.scale[0] || 1;
+  const sy = t.scale[1] || 1;
+  return xy(rx / sx, ry / sy);
+}
+
 /** Rotate/scale a world delta vector into a transform's local space (no translation). */
 export function worldDeltaToLocal(t: ResolvedTransform2D, delta: AbsXY): AbsXY {
   const cos = Math.cos(-t.rotation);

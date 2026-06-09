@@ -3,7 +3,6 @@ import { circle, createProgram, polygon, tweenSignal, xy } from "../index";
 import { buildProgram } from "../program/build";
 import { derived } from "./derived";
 import { signal, valueTracker } from "./signal";
-import { tweenSignal } from "./tween-signal";
 
 describe("reactive layer (M6)", () => {
   it("bumps geometryVersion monotonically on each derived rebuild", async () => {
@@ -141,5 +140,7 @@ describe("reactive layer (M6)", () => {
     expect(t.get()).toBeCloseTo(5);
     player.seek(2);
     expect(t.get()).toBeCloseTo(10);
+    player.seek(0);
+    expect(t.get()).toBeCloseTo(0);
   });
 });

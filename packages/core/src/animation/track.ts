@@ -330,8 +330,7 @@ export function compileSpec(
       let glyphWriteSpans: GlyphRevealSpan[] | undefined;
       if (layout && spec.stroke?.mode !== "contour-parallel") {
         const direction = spec.stroke?.direction ?? "ltr";
-        const order =
-          direction === "rtl" ? [...layout.glyphOrder()].reverse() : layout.glyphOrder();
+        const order = layout.glyphOrder();
         const temporal = computeGlyphRevealSpans(
           order.length,
           spec.stroke?.glyphOverlap ?? 0,
@@ -413,6 +412,9 @@ export function compileSpec(
           points: c.points,
           closed: c.closed,
         }));
+        const fromOpacity =
+          (projection.read(spec.targetId, { type: "opacity" }) as number | undefined) ?? 1;
+        const toOpacity = 1;
         const track: Track = {
           id: ids.next("track"),
           targetId: spec.targetId,
@@ -422,8 +424,10 @@ export function compileSpec(
           evaluate(localProgress: number): StatePatch {
             const eased = easeFn(clamp(localProgress, 0, 1));
             const firstHalf = eased < 0.5;
+            const halfT = firstHalf ? eased * 2 : (eased - 0.5) * 2;
+            const opacity = firstHalf ? fromOpacity * (1 - halfT) : toOpacity * halfT;
             const changes: RuntimeState2DPatch = {
-              opacity: Math.abs(2 * eased - 1),
+              opacity,
               geometryOverride: { contours: firstHalf ? fromGeo : toGeo },
               // Signal the renderer to rebuild meshes when the geometry swaps.
               geometryVersion: firstHalf

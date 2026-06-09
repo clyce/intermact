@@ -1,4 +1,3 @@
-export * from "./seven-segment";
 export * from "./svg-path";
 export * from "./glyph";
 export * from "./font-registry";

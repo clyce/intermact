@@ -119,6 +119,17 @@ describe("sequential write spans", () => {
     expect(spans.every((s) => s.start === 0 && s.end === 1)).toBe(true);
     expect(glyphLocalReveal(0.2, spans[0]!)).toBe(0.2);
   });
+
+  it("reveals right-to-left by assigning earlier windows to higher glyph indices", () => {
+    const order = [0, 1, 2];
+    const temporal = computeGlyphRevealSpans(order.length, 0, "rtl");
+    const glyphWriteSpans: { start: number; end: number }[] = [];
+    order.forEach((gi, i) => {
+      glyphWriteSpans[gi] = temporal[i]!;
+    });
+    expect(glyphWriteSpans[2]!.start).toBeLessThan(glyphWriteSpans[1]!.start);
+    expect(glyphWriteSpans[1]!.start).toBeLessThan(glyphWriteSpans[0]!.start);
+  });
 });
 
 describe("MathJax LaTeX engine", () => {

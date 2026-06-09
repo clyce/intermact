@@ -26,6 +26,11 @@ export function getRegisteredFont(id: string): RegisteredFont | undefined {
   return registry.get(id);
 }
 
+/** Resolve the active default font id, if one was set during the build pass. */
+export function getDefaultFontId(): string | undefined {
+  return defaultFontId;
+}
+
 /** Set the fallback font id for sync text APIs (`labelContours`, etc.). */
 export function setDefaultFont(id: string): void {
   if (!registry.has(id)) {

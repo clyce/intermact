@@ -23,10 +23,32 @@ describe("hit-test primitives (M11 / §12.1)", () => {
     expect(distanceToPolyline(xy(0.5, 0.05), line)).toBeCloseTo(0.05, 6);
   });
 
-  it("hitProxy offsets the proxy by the object's world position", () => {
+  it("hitProxy maps world points through the object's transform", () => {
     const proxy = { kind: "disc" as const, center: xy(0, 0), radius: 0.2 };
-    expect(hitProxy(proxy, xy(2.05, 0), xy(2, 0))).toBe(true);
-    expect(hitProxy(proxy, xy(0.05, 0), xy(2, 0))).toBe(false);
+    const transform = {
+      position: xy(2, 0),
+      rotation: 0,
+      scale: [1, 1] as const,
+      zIndex: 0,
+    };
+    expect(hitProxy(proxy, xy(2.05, 0), transform)).toBe(true);
+    expect(hitProxy(proxy, xy(0.05, 0), transform)).toBe(false);
+  });
+
+  it("hitProxy inverts rotation and scale", () => {
+    const proxy = {
+      kind: "rect" as const,
+      min: xy(-0.2, -0.1),
+      max: xy(0.2, 0.1),
+    };
+    const transform = {
+      position: xy(0, 0),
+      rotation: Math.PI / 2,
+      scale: [1, 1] as const,
+      zIndex: 0,
+    };
+    expect(hitProxy(proxy, xy(0, 0.15), transform)).toBe(true);
+    expect(hitProxy(proxy, xy(0.15, 0), transform)).toBe(false);
   });
 
   it("hitTest returns the topmost entry by zIndex", () => {
@@ -34,13 +56,13 @@ describe("hit-test primitives (M11 / §12.1)", () => {
       {
         id: "a",
         proxy: { kind: "disc", center: xy(0, 0), radius: 0.5 },
-        offset: xy(0, 0),
+        transform: { position: xy(0, 0), rotation: 0, scale: [1, 1], zIndex: 0 },
         zIndex: 0,
       },
       {
         id: "b",
         proxy: { kind: "disc", center: xy(0, 0), radius: 0.5 },
-        offset: xy(0, 0),
+        transform: { position: xy(0, 0), rotation: 0, scale: [1, 1], zIndex: 5 },
         zIndex: 5,
       },
     ];
@@ -53,8 +75,17 @@ describe("hit-test primitives (M11 / §12.1)", () => {
     const proxy = pickBandFromObject(c, 0.1);
     expect(proxy.kind).toBe("band");
     // A point right on the ring is a hit; the empty center is not.
-    expect(hitProxy(proxy, xy(1, 0), xy(0, 0))).toBe(true);
-    expect(hitProxy(proxy, xy(0, 0), xy(0, 0))).toBe(false);
+    expect(
+      hitProxy(proxy, xy(1, 0), {
+        position: xy(0, 0),
+        rotation: 0,
+        scale: [1, 1],
+        zIndex: 0,
+      }),
+    ).toBe(true);
+    expect(
+      hitProxy(proxy, xy(0, 0), { position: xy(0, 0), rotation: 0, scale: [1, 1], zIndex: 0 }),
+    ).toBe(false);
   });
 });
 

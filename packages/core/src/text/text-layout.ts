@@ -15,6 +15,7 @@ import { type ObjectStyle } from "../object/style";
 import { type ObjectTrait, type TextLayoutTrait, type TextToken } from "../object/traits";
 import { type IMObject2D, type ObjectPart2D } from "../object/types";
 import { glyphFor, resolveFontId } from "./glyph-resolver";
+import { getDefaultFontId } from "./font-registry";
 
 const GLYPH_SAMPLES = 64;
 
@@ -198,6 +199,9 @@ export function labelContours(
   opts: LabelOptions = {},
 ): { contours: RawContour[]; width: number; height: number } {
   const size = opts.size ?? 0.36;
+  if (!opts.font && !getDefaultFontId()) {
+    return { contours: [], width: 0, height: size };
+  }
   const scale = size / CAP_HEIGHT;
   const placed = placeString(text, 0, 0, {
     scale,

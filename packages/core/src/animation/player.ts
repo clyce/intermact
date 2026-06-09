@@ -3,7 +3,7 @@ import { type IMObject } from "../object/types";
 import { type ReactiveEngine } from "../reactive/engine";
 import { type ResolvedTransform2D, type RuntimeState2D } from "../runtime/state";
 import { RuntimeStateStore } from "../runtime/store";
-import { composeTransform2D } from "../runtime/world-transform";
+import { composeTransform2D, IDENTITY_TRANSFORM_2D } from "../runtime/world-transform";
 import { type ReactiveSceneHost } from "../reactive/engine";
 import { type ObjectRenderState, type RenderSnapshot, type ViewportSnapshot } from "./snapshot";
 import { type Storyboard } from "./storyboard";
@@ -192,6 +192,11 @@ export class Player {
   ): ResolvedTransform2D {
     const cached = cache.get(id);
     if (cached) return cached;
+    if (cache.has(id)) {
+      // Cycle in parent chain — return identity to avoid infinite recursion.
+      return IDENTITY_TRANSFORM_2D;
+    }
+    cache.set(id, IDENTITY_TRANSFORM_2D);
     const local = states.get(id)?.transform;
     const parentId = parents.get(id);
     let world: ResolvedTransform2D;
@@ -218,6 +223,8 @@ export class Player {
   ): number {
     const cached = cache.get(id);
     if (cached !== undefined) return cached;
+    if (cache.has(id)) return 1;
+    cache.set(id, 1);
     const local = states.get(id)?.opacity ?? 1;
     const parentId = parents.get(id);
     const opacity =
@@ -237,6 +244,7 @@ export class Player {
       this.store.applyPatch(track.evaluate(local));
     }
     if (this.options.reactive) {
+      this.options.reactive.resetSignalsToInitial();
       for (const track of this.storyboard.signalTracks) {
         if (track.start > time) continue;
         const local = track.duration > 0 ? clamp((time - track.start) / track.duration, 0, 1) : 1;

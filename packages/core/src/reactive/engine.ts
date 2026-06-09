@@ -41,13 +41,25 @@ export class ReactiveEngine {
   private readonly derived = new Map<string, DerivedEntry>();
   private readonly updaters = new Map<string, UpdaterEntry[]>();
   private readonly depVersions = new Map<SignalId, number>();
+  /** Baseline values captured at first registration (seek resets). */
+  private readonly signalInitialValues = new Map<SignalId, unknown>();
   /** Monotonic per-object versions; survives Player `applyAt` store resets. */
   private readonly derivedGeometryVersions = new Map<string, number>();
 
   /** Register a signal for tweenSignal timeline tracks. */
   registerSignal<T>(sig: Signal<T>): void {
-    this.signals.set(getSignalId(sig), sig as Signal<unknown>);
-    if (!this.depVersions.has(getSignalId(sig))) this.depVersions.set(getSignalId(sig), 0);
+    const id = getSignalId(sig);
+    this.signals.set(id, sig as Signal<unknown>);
+    if (!this.depVersions.has(id)) this.depVersions.set(id, 0);
+    if (!this.signalInitialValues.has(id)) this.signalInitialValues.set(id, sig.get());
+  }
+
+  /** Restore every tracked signal to its value at first registration (seek baseline). */
+  resetSignalsToInitial(): void {
+    for (const [id, sig] of this.signals) {
+      const initial = this.signalInitialValues.get(id);
+      if (initial !== undefined) sig.set(initial);
+    }
   }
 
   /** Apply a numeric value from a compiled signal track (seek-safe). */
@@ -83,6 +95,7 @@ export class ReactiveEngine {
     this.derived.clear();
     this.updaters.clear();
     this.depVersions.clear();
+    this.signalInitialValues.clear();
     this.derivedGeometryVersions.clear();
   }
 

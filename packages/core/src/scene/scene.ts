@@ -12,6 +12,7 @@ import {
   IDENTITY_TRANSFORM_2D,
   resolveTransform2D,
 } from "../runtime/world-transform";
+import { IntermactError } from "../errors";
 import { type RuntimeState2D } from "../runtime/state";
 import { emptyObject2D } from "./empty";
 import { createLayoutHandle, type LayoutHost } from "./layout";
@@ -74,7 +75,29 @@ export class Scene2D implements LayoutHost {
    * the parent chain.
    */
   setParent(child: RegisteredObject2D, parent: RegisteredObject2D | null): void {
+    if (parent === child) {
+      throw new IntermactError("invalid-argument", `Cannot parent object "${child.id}" to itself.`);
+    }
+    if (parent && !this.registered.has(parent.id)) {
+      throw new IntermactError(
+        "invalid-argument",
+        `Parent "${parent.id}" is not registered in scene "${this.id}".`,
+      );
+    }
     if (parent) {
+      let cursor: string | undefined = parent.id;
+      const seen = new Set<string>();
+      while (cursor) {
+        if (cursor === child.id) {
+          throw new IntermactError(
+            "invalid-argument",
+            `Parenting "${child.id}" under "${parent.id}" would create a cycle.`,
+          );
+        }
+        if (seen.has(cursor)) break;
+        seen.add(cursor);
+        cursor = this.parents.get(cursor);
+      }
       this.parents.set(child.id, parent.id);
       child.parentId = parent.id;
     } else {

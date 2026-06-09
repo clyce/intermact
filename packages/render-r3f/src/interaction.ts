@@ -56,7 +56,7 @@ export function collectHitEntries(snapshot: RenderSnapshot): HitEntry[] {
     entries.push({
       id,
       proxy: trait.pick,
-      offset: render.state.transform.position,
+      transform: render.state.transform,
       zIndex: render.state.transform.zIndex,
     });
   }

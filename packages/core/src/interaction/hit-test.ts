@@ -5,6 +5,8 @@
  * precision issues (the documented alternative to invisible pick meshes).
  */
 import { type AbsXY, xy } from "../math/vec";
+import { type ResolvedTransform2D } from "../runtime/state";
+import { worldPointToLocal } from "../runtime/world-transform";
 import { type IMObject2D } from "../object/types";
 import { findTrait } from "../object/traits";
 import { type PickProxy } from "./types";
@@ -52,9 +54,9 @@ export function distanceToPolyline(p: AbsXY, points: Float32Array): number {
   return best;
 }
 
-/** Test a world-space point against a proxy translated by `offset`. */
-export function hitProxy(proxy: PickProxy, p: AbsXY, offset: AbsXY): boolean {
-  const local = xy(p[0] - offset[0], p[1] - offset[1]);
+/** Test a world-space point against a proxy in the object's local space. */
+export function hitProxy(proxy: PickProxy, p: AbsXY, transform: ResolvedTransform2D): boolean {
+  const local = worldPointToLocal(transform, p);
   switch (proxy.kind) {
     case "disc":
       return pointInDisc(local, proxy.center, proxy.radius);
@@ -71,8 +73,8 @@ export function hitProxy(proxy: PickProxy, p: AbsXY, offset: AbsXY): boolean {
 export interface HitEntry {
   readonly id: string;
   readonly proxy: PickProxy;
-  /** World translation applied to the proxy (object's runtime position). */
-  readonly offset: AbsXY;
+  /** World transform used to map the pointer into proxy-local space. */
+  readonly transform: ResolvedTransform2D;
   readonly zIndex: number;
 }
 
@@ -81,7 +83,7 @@ export function hitTest(entries: readonly HitEntry[], p: AbsXY): string | null {
   let bestId: string | null = null;
   let bestZ = -Infinity;
   for (const e of entries) {
-    if (hitProxy(e.proxy, p, e.offset) && e.zIndex >= bestZ) {
+    if (hitProxy(e.proxy, p, e.transform) && e.zIndex >= bestZ) {
       bestZ = e.zIndex;
       bestId = e.id;
     }

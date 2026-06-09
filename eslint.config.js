@@ -12,6 +12,7 @@ export default tseslint.config(
       "**/*.config.ts",
       "**/coverage/**",
       "docs/.vitepress/cache/**",
+      "docs/.vitepress/.temp/**",
       "docs/.vitepress/dist/**",
       "docs/public/demos/**",
       "docs/reference/**",
