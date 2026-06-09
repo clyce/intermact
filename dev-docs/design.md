@@ -77,7 +77,7 @@ Intermact 是一个基于 React Three Fiber 的交互式数理可视化平台。
   - **与 §19.2 的微小偏差**：`decimalNumber` 在示例中用 `xy` 世界坐标定位（非 `uv` HUD 贴边）；完整视口级 UV 布局在 Canvas/HUD 里程碑细化。
 - **文档站（VitePress + TypeDoc）**（2026-06-06，API Reference 2026-06-07）：
   - 选型 **VitePress**（指南/示例索引）+ **TypeDoc**（`typedoc-plugin-markdown` + `typedoc-vitepress-theme`，从 `packages/*/src` 导出符号与 TSDoc 生成 `docs/reference/`）。站点位于 `docs/`，workspace 包 `@intermact/docs`。
-  - 命令：`pnpm run gen:reference`（仅生成 API）、`pnpm run dev:docs`（先 gen 再 VitePress 开发）、`pnpm run build:docs`（静态构建至 `docs/.vitepress/dist`）。
+  - 命令：`pnpm run gen:reference`（仅生成 API）、`pnpm run dev:docs`（先 gen 再 VitePress 开发）、`pnpm run build:docs`（静态构建至 `docs/.vitepress/dist`）。**统一站点**（2026-06）：`examples` 构建产物嵌入 `docs/public/demos/`，与 VitePress 同域提供 `/demos/` 交互画廊；`pnpm run dev:site`（文档 `:5174` + 代理）、`pnpm run build:site` / `preview:site`（生产预览）。编排脚本在根目录 `scripts/`：`site-config.mjs`（`SITE_BASE` / `DEMOS_BASE`）、`dev-site.mjs`、`build-site.mjs`（build → embed → vitepress build → verify）、`embed-examples.mjs`、`verify-site-dist.mjs`；GitHub Pages 见 `.github/workflows/site.yml`（`SITE_BASE=/<repo>/`）。示例源码仍留在 `examples/`，不合并 `package.json`。
   - Phase-1 覆盖：指南（概念与用法）、**API Reference**（符号页由 TypeDoc 自动生成；总览架构说明见 `docs/reference-index.src.md`，经 `merge-reference-index.mjs` 并入 `/reference/`）、monorepo 包分层说明、示例索引、`v01-checklist`；架构契约仍以本文件与 `dev-roadmap.md` 为准。
 
 ### 0.2 实现进度日志（Phase-2 / v0.2）

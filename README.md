@@ -9,10 +9,11 @@ See [`dev-docs/intro.md`](dev-docs/intro.md) for motivation,
 [`dev-docs/design.md`](dev-docs/design.md) for architecture, and
 [`dev-docs/dev-roadmap.md`](dev-docs/dev-roadmap.md) for the milestone roadmap.
 
-**Online docs (VitePress + TypeDoc):** run `pnpm run dev:docs`, or read the built
-site from `docs/` after `pnpm run build:docs`. Guides and the example index are
-hand-written; **API Reference** (`/reference/`) is generated from source TSDoc
-via `pnpm run gen:reference`.
+**Site (VitePress + TypeDoc + examples):** `pnpm run dev:site` → `http://localhost:5174`
+(guides, API reference, and the interactive gallery at `/demos/`). Production:
+`pnpm run build:site` then `pnpm run preview:site`. Standalone gallery only:
+`pnpm run dev:examples` on port 5173. **API Reference** is generated via
+`pnpm run gen:reference`.
 
 ## Monorepo layout
 
@@ -37,8 +38,10 @@ are enforced by `dependency-cruiser`.
 
 ```bash
 pnpm install
-pnpm run dev:examples   # launch the demo gallery (Vite)
-pnpm run dev:docs       # launch the documentation site (VitePress)
+pnpm run dev:site       # docs + interactive examples (recommended)
+pnpm run dev:examples   # gallery only (Vite, port 5173)
+pnpm run dev:docs       # VitePress only (port 5174; /demos/ needs dev:site or build:site)
+pnpm run build:site     # static site with embedded /demos/
 ```
 
 ## Quality gate (local CI)

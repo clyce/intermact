@@ -13,7 +13,10 @@ hero:
       text: API Reference
       link: /reference/
     - theme: alt
-      text: 查看示例库
+      text: 交互示例
+      link: /demos/
+    - theme: alt
+      text: 示例索引
       link: /examples/
     - theme: alt
       text: 架构设计（design.md）

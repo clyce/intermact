@@ -13,21 +13,36 @@ cd intermact
 pnpm install
 ```
 
-### 示例画廊
+### 官网（文档 + 交互示例，推荐）
+
+```bash
+pnpm run dev:site
+```
+
+浏览器打开 **`http://localhost:5174`**：指南、API Reference、路线图与 **`/demos/`** 可交互画廊在同一站点。开发期 `/demos/` 由 VitePress 代理到示例 dev server（`5173`）。
+
+生产构建：
+
+```bash
+pnpm run build:site    # examples → docs/public/demos + VitePress 静态站
+pnpm run preview:site  # 本地预览完整站点
+```
+
+### 仅示例画廊（独立调试）
 
 ```bash
 pnpm run dev:examples
 ```
 
-浏览器打开 `http://localhost:5173`，侧边栏按能力域浏览全部演示（timeline / geometry / render / anim / coords / reactive / l1）。
+浏览器打开 `http://localhost:5173`（根路径 `/`，不含文档导航）。
 
-### 文档站
+### 仅文档站
 
 ```bash
 pnpm run dev:docs
 ```
 
-默认 `http://localhost:5174`（VitePress 在 5173 被占用时会自动递增端口）。
+`http://localhost:5174`；**`/demos/` 需 `dev:site`（实时画廊）或先 `build:site`（静态嵌入）**，单独 `dev:docs` 不会启动 `:5173` 示例服务。
 
 ### 质量闸口
 
@@ -100,4 +115,5 @@ export function Demo() {
 - [架构概览](./architecture.md) — 构建期 vs 播放期、包边界
 - [程序与场景](./program-and-scene.md) — `createProgram` / `Scene2D` / `register`
 - [API Reference](/reference/) — 从源码 TSDoc 自动生成的符号文档
-- [示例目录](../examples/) — 按里程碑浏览可运行 demo
+- [交互示例 `/demos/`](/demos/) — 可运行画廊（与文档同站）
+- [示例目录](../examples/) — 按里程碑的文字索引（可链到 `/demos/#<id>`）

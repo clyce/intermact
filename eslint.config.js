@@ -13,6 +13,7 @@ export default tseslint.config(
       "**/coverage/**",
       "docs/.vitepress/cache/**",
       "docs/.vitepress/dist/**",
+      "docs/public/demos/**",
       "docs/reference/**",
     ],
   },

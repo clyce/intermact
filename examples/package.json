@@ -6,8 +6,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:embed": "vite --port 5173 --strictPort --host 127.0.0.1",
     "build": "vite build",
-    "preview": "vite preview"
+    "build:embed": "vite build",
+    "preview": "vite preview",
+    "preview:embed": "vite preview --port 5173 --strictPort --host 127.0.0.1"
   },
   "dependencies": {
     "@fontsource/dejavu-sans": "^5.2.5",

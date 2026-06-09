@@ -1,8 +1,11 @@
 # 示例目录
 
-所有演示位于 `examples/src/`，由 `registry.tsx` 注册，通过 `pnpm run dev:examples` 启动。
+源码位于 `examples/src/`，由 `registry.tsx` 注册。
 
-侧边栏按 **group** 分组，与 `dev-roadmap.md` 各里程碑 Examples 条目对应。
+- **[打开交互演示画廊 →](/demos/)**（与文档同站，推荐 `pnpm run dev:site`）
+- 独立调试画廊：`pnpm run dev:examples`（`http://localhost:5173`）
+
+下表按 **group** 分组，与 `dev-roadmap.md` 各里程碑 Examples 条目对应。链到具体 demo：`/demos/#<id>`（例如 [`/demos/#reactive/value-tracker`](/demos/#reactive/value-tracker)）。
 
 ## Phase-1（v0.1）
 

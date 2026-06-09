@@ -54,8 +54,10 @@ Desktop.ini
 
 # --- VitePress (docs site) ---
 docs/.vitepress/cache
+docs/.vitepress/.temp
 docs/.vitepress/dist
 docs/reference/
+docs/public/demos/
 
 # --- Optional tooling artifacts (not used yet; harmless if added later) ---
 storybook-static/

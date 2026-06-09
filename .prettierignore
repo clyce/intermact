@@ -4,5 +4,7 @@ coverage
 pnpm-lock.yaml
 *.md
 docs/.vitepress/cache
+docs/.vitepress/.temp
 docs/.vitepress/dist
+docs/public/demos
 docs/reference

@@ -1,7 +1,14 @@
 import { defineConfig } from "vitepress";
 import typedocSidebar from "../reference/typedoc-sidebar.json";
 
+/** Live examples proxy — only when `pnpm run dev:site` sets this env var. */
+const proxyExamples = process.env.INTERMACT_DEV_SITE === "1";
+
+/** Root path for GitHub Project Pages (`/Intermact/`) or `/` locally. */
+const siteBase = process.env.SITE_BASE || "/";
+
 export default defineConfig({
+  base: siteBase,
   title: "Intermact",
   description: "Interactive Manim-style math visualization on React Three Fiber.",
   lang: "zh-CN",
@@ -16,7 +23,7 @@ export default defineConfig({
     nav: [
       { text: "指南", link: "/guide/introduction" },
       { text: "API Reference", link: "/reference/" },
-      { text: "示例", link: "/examples/" },
+      { text: "交互示例", link: "/demos/" },
       { text: "路线图", link: "/project/roadmap" },
       {
         text: "设计文档",
@@ -65,8 +72,11 @@ export default defineConfig({
       ],
       "/examples/": [
         {
-          text: "示例库",
-          items: [{ text: "演示目录", link: "/examples/" }],
+          text: "示例",
+          items: [
+            { text: "交互演示（画廊）", link: "/demos/" },
+            { text: "目录索引", link: "/examples/" },
+          ],
         },
       ],
       "/project/": [
@@ -102,6 +112,32 @@ export default defineConfig({
     editLink: {
       pattern: "https://github.com/intermact/intermact/edit/main/docs/:path",
       text: "在 GitHub 上编辑此页",
+    },
+  },
+  vite: {
+    server: {
+      port: 5174,
+      strictPort: true,
+      ...(proxyExamples
+        ? {
+            proxy: {
+              // Gallery SPA + assets — skip VitePress markdown module resolution.
+              "^/demos/": {
+                target: "http://127.0.0.1:5173",
+                changeOrigin: true,
+                bypass(req) {
+                  const url = req.url ?? "";
+                  if (url.includes(".md")) return url;
+                },
+              },
+              "^/demos$": {
+                target: "http://127.0.0.1:5173",
+                changeOrigin: true,
+                rewrite: () => "/demos/",
+              },
+            },
+          }
+        : {}),
     },
   },
 });

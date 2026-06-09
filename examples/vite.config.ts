@@ -18,7 +18,11 @@ const intermactAliases = {
   "@intermact/react": pkg("../packages/react/src/index.ts"),
 };
 
+/** Gallery base when embedded in the docs site (`/demos/` or `/repo/demos/`). */
+const demosBase = process.env.DEMOS_BASE ?? "/";
+
 export default defineConfig({
+  base: demosBase,
   plugins: [react(), tsconfigPaths({ root: ".." })],
   resolve: {
     alias: intermactAliases,

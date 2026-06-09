@@ -18,10 +18,13 @@
     "depcruise": "depcruise packages --config .dependency-cruiser.cjs",
     "ci": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run depcruise && pnpm run build",
     "dev:examples": "pnpm --filter @intermact/examples run dev",
+    "dev:site": "node scripts/dev-site.mjs",
     "gen:reference": "pnpm --filter @intermact/docs run gen:reference",
     "dev:docs": "pnpm --filter @intermact/docs run dev",
     "build:docs": "pnpm --filter @intermact/docs run build",
-    "preview:docs": "pnpm --filter @intermact/docs run preview"
+    "build:site": "node scripts/build-site.mjs",
+    "preview:docs": "pnpm --filter @intermact/docs run preview",
+    "preview:site": "node scripts/verify-site-dist.mjs && pnpm run preview:docs"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
