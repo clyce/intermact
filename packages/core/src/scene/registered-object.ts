@@ -4,24 +4,31 @@ import {
   type AnimationSpec,
   type Easing,
   type FillRevealSpec,
+  morph,
+  type MorphOptions,
   type PropertyPath,
   type StrokeRevealSpec,
   toAnimation,
+  transformMatching,
   type TweenOptions,
 } from "../animation";
-import {
-  createInitialState2D,
-  type RuntimeState2D,
-  type RuntimeState2DPatch,
-} from "../runtime/state";
-import { hasTrait } from "../object/traits";
+import { createInitialState2D, type RuntimeState2D } from "../runtime/state";
+import { findTrait, hasTrait, type InteractiveTrait } from "../object/traits";
 import { type IMObject2D } from "../object/types";
+import { pickRectFromObject } from "../interaction/hit-test";
+import { type PickProxy, type PointerEventBinding } from "../interaction/types";
 import { type AxesHandle } from "../layout/axes";
+import { type LayoutHandle } from "./layout";
 import { type UpdaterFn } from "../reactive/engine";
 
 /** Minimal reactive host for per-object updaters. */
 export interface UpdaterHost {
   addUpdater(targetId: string, fn: UpdaterFn): () => void;
+}
+
+/** Host able to swap an object's definition (so `.on()` reaches snapshots). */
+export interface DefinitionHost {
+  replaceObject(id: string, object: IMObject2D): void;
 }
 import { type Transform2D } from "./transform";
 
@@ -46,13 +53,18 @@ export class RegisteredObject2D {
   /** Current immutable object definition (design.md §9.2). */
   object: IMObject2D;
 
+  /** RectTransform-/Manim-style layout (design.md §9.4); set by the Scene. */
+  layout!: LayoutHandle;
+
+  /** Parent in the transform hierarchy (design.md §9.3), if any. */
+  parentId?: string;
+
   constructor(
     readonly id: string,
     object: IMObject2D,
     private transform: Transform2D,
-    /** Scene-provided setter to mutate this object's baseline runtime state. */
-    readonly applyInitial?: (patch: RuntimeState2DPatch) => void,
     private readonly reactive?: UpdaterHost | null,
+    private readonly defHost?: DefinitionHost | null,
   ) {
     this.object = object;
   }
@@ -125,10 +137,23 @@ export class RegisteredObject2D {
     return this.tween({ type: "opacity" }, opacity, options);
   }
 
-  /** Fade in from invisible: sets baseline opacity 0, then tweens to 1. */
+  /** Fade in from invisible: baseline opacity 0 is applied when this is played (§11). */
   fadeIn(options?: TweenOptions): Animation {
-    this.applyInitial?.({ opacity: 0 });
-    return this.tween({ type: "opacity" }, 1, options);
+    const spec = {
+      kind: "fade" as const,
+      targetId: this.id,
+      from: 0,
+      to: 1,
+      duration: options?.duration ?? DEFAULT_DURATION,
+      ...(options?.easing !== undefined ? { easing: options.easing } : {}),
+    };
+    if (options?.delay && options.delay > 0) {
+      return toAnimation({
+        kind: "sequence",
+        children: [{ kind: "wait", duration: options.delay }, spec],
+      });
+    }
+    return toAnimation(spec);
   }
 
   /** Fade out to invisible. */
@@ -137,12 +162,11 @@ export class RegisteredObject2D {
   }
 
   /**
-   * `Create`: draw the object on (stroke trim, then fill reveal). Sets the
-   * baseline state hidden so the object is not shown before this plays (§11).
+   * `Create`: draw the object on (stroke trim, then fill reveal). Baseline
+   * hidden state is applied when this animation is played into the Storyboard (§11).
    */
   create(options?: CreateOptions): Animation {
     const hasFill = Boolean(this.object.style?.fill) && hasTrait(this.object.traits, "fill");
-    this.applyInitial?.({ revealStart: 0, revealEnd: 0, fillProgress: hasFill ? 0 : 1 });
     const spec: AnimationSpec = {
       kind: "create",
       targetId: this.id,
@@ -152,6 +176,55 @@ export class RegisteredObject2D {
       ...(options?.easing !== undefined ? { easing: options.easing } : {}),
     };
     return toAnimation(spec);
+  }
+
+  /**
+   * `Write`: sequential left-to-right glyph stroke reveal for text/LaTeX
+   * (design.md §13). Sugar over {@link create} with `stroke.direction: "ltr"`
+   * and optional `stroke.glyphOverlap` (negative padding between glyphs).
+   */
+  write(options?: CreateOptions): Animation {
+    return this.create({
+      ...options,
+      stroke: { mode: "path-order", direction: "ltr", glyphOverlap: 0, ...options?.stroke },
+    });
+  }
+
+  /**
+   * `Morph`: transform this object's geometry toward `target` (design.md §11.4).
+   * Strategy defaults to `arc-length`; pass `strategy: "matching"` (or use
+   * {@link transformMatchingTo}) for part-keyed composite morphs.
+   */
+  morphTo(target: IMObject2D, options?: MorphOptions): Animation {
+    return morph(this, target, options);
+  }
+
+  /** Part-aware morph (transformer/remover/introducer) toward a composite target. */
+  transformMatchingTo(target: IMObject2D, options?: MorphOptions): Animation {
+    return transformMatching(this, target, options);
+  }
+
+  /**
+   * Attach pointer/drag handlers (design.md §12.2). Adds (or replaces) an
+   * {@link InteractiveTrait} carrying the binding and a pick proxy (defaults to
+   * the object's bounds rect), propagating the new definition so the renderer
+   * sees it. Returns `this` for chaining.
+   */
+  on(binding: PointerEventBinding, pick?: PickProxy): this {
+    const existing = findTrait(this.object.traits, "interactive");
+    const proxy = pick ?? existing?.pick ?? pickRectFromObject(this.object);
+    const trait: InteractiveTrait = {
+      kind: "interactive",
+      pick: proxy,
+      binding,
+      ...(existing?.drag ? { drag: existing.drag } : {}),
+      ...(existing?.cursor ? { cursor: existing.cursor } : {}),
+    };
+    const traits = [...this.object.traits.filter((t) => t.kind !== "interactive"), trait];
+    const next: IMObject2D = { ...this.object, traits };
+    this.object = next;
+    this.defHost?.replaceObject(this.id, next);
+    return this;
   }
 }
 

@@ -25,6 +25,10 @@ export interface GeometryProviderConfig {
   readonly rawContours: readonly RawContour[];
   readonly fillable: boolean;
   readonly fillRule?: "nonzero" | "evenodd";
+  /** Independent fill groups (one per glyph) for correct hole handling. */
+  readonly fillGroups?: readonly (readonly RawContour[])[];
+  /** Flat contour index → fill group index. */
+  readonly contourGlyphIndex?: readonly number[];
   /** Default resample count for `samplePath` when none is requested. */
   readonly defaultSamples?: number;
 }
@@ -50,6 +54,19 @@ export function createGeometryProvider2D(config: GeometryProviderConfig): Geomet
     });
   };
 
+  const fillGroupsRaw = config.fillGroups;
+  const sampleFillGroups = (opts?: PathSampleOptions): SampledContour2D[][] | null => {
+    if (!fillGroupsRaw?.length) return null;
+    const count = opts?.samples ?? config.defaultSamples;
+    const useResample = count !== undefined && opts?.arcLength !== false;
+    return fillGroupsRaw.map((group) =>
+      group.map((raw) => {
+        const points = useResample ? resampleByArcLength(raw.points, raw.closed, count) : raw.points;
+        return toSampledContour(points, raw.closed);
+      }),
+    );
+  };
+
   return {
     capabilities,
     samplePath(opts?: PathSampleOptions): SampledPath2D {
@@ -67,6 +84,12 @@ export function createGeometryProvider2D(config: GeometryProviderConfig): Geomet
       const contours = sampleContours(opts);
       return contours[0]?.points ?? new Float32Array(0);
     },
+    sampleFillGroups(opts?: PathSampleOptions): SampledContour2D[][] | null {
+      return sampleFillGroups(opts);
+    },
+    contourGlyphIndex(): readonly number[] | null {
+      return config.contourGlyphIndex ?? null;
+    },
   };
 }
 
@@ -80,7 +103,13 @@ export function fillTraitFrom(
   provider: GeometryProvider2D,
   fillRule: "nonzero" | "evenodd",
 ): FillTrait {
-  return { kind: "fill", fillRule, contours: (opts) => provider.samplePath(opts).contours };
+  return {
+    kind: "fill",
+    fillRule,
+    contours: (opts) => provider.samplePath(opts).contours.filter((c) => c.closed),
+    fillGroups: (opts) => provider.sampleFillGroups?.(opts) ?? undefined,
+    contourGlyphIndex: () => provider.contourGlyphIndex?.() ?? undefined,
+  };
 }
 
 /** Morphable trait exposing normalized contours from a provider. */

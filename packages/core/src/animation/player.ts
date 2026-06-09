@@ -1,8 +1,9 @@
-import { clamp } from "../math/vec";
+import { clamp, xy } from "../math/vec";
 import { type IMObject } from "../object/types";
 import { type ReactiveEngine } from "../reactive/engine";
-import { type RuntimeState2D } from "../runtime/state";
+import { type ResolvedTransform2D, type RuntimeState2D } from "../runtime/state";
 import { RuntimeStateStore } from "../runtime/store";
+import { composeTransform2D } from "../runtime/world-transform";
 import { type ReactiveSceneHost } from "../reactive/engine";
 import { type ObjectRenderState, type RenderSnapshot, type ViewportSnapshot } from "./snapshot";
 import { type Storyboard } from "./storyboard";
@@ -24,6 +25,8 @@ export interface PlayerOptions {
   readonly reactive?: ReactiveEngine;
   /** Primary scene for reactive geometry rebuilds. */
   readonly scene?: ReactiveSceneHost;
+  /** Transform-hierarchy parent links (child id → parent id), design.md §9.3. */
+  readonly parents?: ReadonlyMap<string, string>;
 }
 
 /**
@@ -135,6 +138,12 @@ export class Player {
     this.emit();
   }
 
+  /** Release subscribers and pause playback. */
+  dispose(): void {
+    this.pause();
+    this.subscribers.clear();
+  }
+
   /** Subscribe to frame snapshots; returns an unsubscribe function. */
   subscribe(onFrame: (snapshot: RenderSnapshot) => void): () => void {
     this.subscribers.add(onFrame);
@@ -152,12 +161,71 @@ export class Player {
   /** Current frame snapshot. */
   getSnapshot(): RenderSnapshot {
     this.prepareFrame();
+    const states = this.store.entries();
+    const parents = this.options.parents;
+    const hierarchical = parents !== undefined && parents.size > 0;
+    const tCache = hierarchical ? new Map<string, ResolvedTransform2D>() : null;
+    const oCache = hierarchical ? new Map<string, number>() : null;
     const objects = new Map<string, ObjectRenderState>();
-    for (const [id, state] of this.store.entries()) {
+    for (const [id, state] of states) {
       const object = this.options.objects.get(id);
-      if (object) objects.set(id, { id, object, state });
+      if (!object) continue;
+      let out = state;
+      if (hierarchical) {
+        const world = this.resolveWorldTransform(id, states, parents, tCache!);
+        const opacity = this.resolveWorldOpacity(id, states, parents, oCache!);
+        if (world !== state.transform || opacity !== state.opacity) {
+          out = { ...state, transform: world, opacity };
+        }
+      }
+      objects.set(id, { id, object, state: out });
     }
     return { time: this._time, objects, viewports: this.options.viewports ?? [] };
+  }
+
+  /** Compose a child's world transform from its parent chain (memoized per frame). */
+  private resolveWorldTransform(
+    id: string,
+    states: ReadonlyMap<string, RuntimeState2D>,
+    parents: ReadonlyMap<string, string>,
+    cache: Map<string, ResolvedTransform2D>,
+  ): ResolvedTransform2D {
+    const cached = cache.get(id);
+    if (cached) return cached;
+    const local = states.get(id)?.transform;
+    const parentId = parents.get(id);
+    let world: ResolvedTransform2D;
+    if (!local) {
+      world = { position: xy(0, 0), rotation: 0, scale: [1, 1], zIndex: 0 };
+    } else if (parentId && states.has(parentId)) {
+      world = composeTransform2D(
+        this.resolveWorldTransform(parentId, states, parents, cache),
+        local,
+      );
+    } else {
+      world = local;
+    }
+    cache.set(id, world);
+    return world;
+  }
+
+  /** Multiply opacity down the parent chain (memoized per frame). */
+  private resolveWorldOpacity(
+    id: string,
+    states: ReadonlyMap<string, RuntimeState2D>,
+    parents: ReadonlyMap<string, string>,
+    cache: Map<string, number>,
+  ): number {
+    const cached = cache.get(id);
+    if (cached !== undefined) return cached;
+    const local = states.get(id)?.opacity ?? 1;
+    const parentId = parents.get(id);
+    const opacity =
+      parentId && states.has(parentId)
+        ? local * this.resolveWorldOpacity(parentId, states, parents, cache)
+        : local;
+    cache.set(id, opacity);
+    return opacity;
   }
 
   /** Reset the store to baseline and apply every track active at `time`. */

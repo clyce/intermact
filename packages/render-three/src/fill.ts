@@ -1,14 +1,16 @@
 import { BufferAttribute, BufferGeometry } from "three";
-import { type SampledContour2D, triangulate } from "@intermact/core";
+import { type SampledContour2D, triangulate, triangulateGroups } from "@intermact/core";
 
 /**
- * Fill geometry via earcut triangulation (design.md §15). The first contour is
- * the outer ring and the rest are holes; `fillProgress` (Create fill reveal) is
- * applied by the caller via material opacity for the simple after-stroke-fade
- * strategy.
+ * Fill geometry via earcut triangulation (design.md §15). When `groups` is
+ * provided each group (glyph) is triangulated independently so nested holes
+ * stay with their outer ring.
  */
-export function buildFillGeometry(contours: readonly SampledContour2D[]): BufferGeometry {
-  const tri = triangulate(contours);
+export function buildFillGeometry(
+  contours: readonly SampledContour2D[],
+  groups?: readonly (readonly SampledContour2D[])[],
+): BufferGeometry {
+  const tri = groups?.length ? triangulateGroups(groups) : triangulate(contours);
   const positions = new Float32Array((tri.vertices.length / 2) * 3);
   for (let i = 0; i < tri.vertices.length / 2; i++) {
     positions[i * 3] = tri.vertices[i * 2]!;

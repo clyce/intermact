@@ -62,6 +62,20 @@ export class ReactiveEngine {
     });
   }
 
+  /** Remove derived/updater state for a freed scene object. */
+  unregisterObject(targetId: string): void {
+    this.derived.delete(targetId);
+    this.updaters.delete(targetId);
+  }
+
+  /** Release all tracked signals, derived sources, and updaters. */
+  dispose(): void {
+    this.signals.clear();
+    this.derived.clear();
+    this.updaters.clear();
+    this.depVersions.clear();
+  }
+
   /** Attach a per-frame updater to a registered object; returns an unsubscribe. */
   addUpdater(targetId: string, fn: UpdaterFn): () => void {
     const list = this.updaters.get(targetId) ?? [];
@@ -110,4 +124,27 @@ export class ReactiveEngine {
     const id = getSignalId(sig);
     this.depVersions.set(id, (this.depVersions.get(id) ?? 0) + 1);
   }
+
+  /**
+   * Read-only snapshot of the reactive graph for the Inspector (design.md §16):
+   * tracked signals, derived object sources (with their signal deps), and the
+   * per-object updater counts.
+   */
+  inspect(): ReactiveInspection {
+    return {
+      signals: [...this.signals.keys()],
+      derived: [...this.derived.entries()].map(([id, entry]) => ({
+        id,
+        deps: entry.deps.map((d) => getSignalId(d)),
+      })),
+      updaters: [...this.updaters.entries()].map(([id, list]) => ({ id, count: list.length })),
+    };
+  }
+}
+
+/** Read-only view of the reactive dependency graph (design.md §16). */
+export interface ReactiveInspection {
+  readonly signals: readonly SignalId[];
+  readonly derived: readonly { readonly id: string; readonly deps: readonly SignalId[] }[];
+  readonly updaters: readonly { readonly id: string; readonly count: number }[];
 }

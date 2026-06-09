@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   buildProgram,
+  disposeBuiltProgram,
   type BuiltProgram,
   type IntermactProgram,
   type Player,
@@ -10,8 +11,8 @@ import {
 
 /**
  * Build a program once and drive its Player with a RAF loop. Returns the live
- * player, its scene, and the latest frame snapshot. Used by the M1 timeline
- * demos to visualize seek/rate/reverse before the R3F renderer lands in M3.
+ * player, its scene, and the latest frame snapshot. Used by headless timeline
+ * tooling and legacy SVG demos.
  */
 export function useTimelinePlayer(
   program: IntermactProgram,
@@ -22,11 +23,18 @@ export function useTimelinePlayer(
 
   useEffect(() => {
     let alive = true;
+    let current: BuiltProgram | null = null;
     void buildProgram(program, seed !== undefined ? { seed } : {}).then((b) => {
-      if (alive) setBuilt(b);
+      if (alive) {
+        current = b;
+        setBuilt(b);
+      } else {
+        disposeBuiltProgram(b);
+      }
     });
     return () => {
       alive = false;
+      if (current) disposeBuiltProgram(current);
     };
   }, [program, seed]);
 

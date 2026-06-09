@@ -1,5 +1,5 @@
 import { type IMObject } from "../object/types";
-import { type RuntimeState2D } from "../runtime/state";
+import { applyPatch2D, type RuntimeState2D } from "../runtime/state";
 import { type Animation } from "./spec";
 import {
   compileSpec,
@@ -77,13 +77,17 @@ export class StoryboardBuilder {
   private readonly compileContext: CompileContext;
 
   constructor(
-    private readonly initialStates: ReadonlyMap<string, RuntimeState2D>,
+    private readonly initialStates: Map<string, RuntimeState2D>,
     objects: ReadonlyMap<string, IMObject> = new Map(),
   ) {
     this.compileContext = {
       getObject: (id) => {
         const obj = objects.get(id);
         return obj && obj.dimension === "2d" ? obj : undefined;
+      },
+      applyBaselinePatch: (targetId, patch) => {
+        const current = this.initialStates.get(targetId);
+        if (current) this.initialStates.set(targetId, applyPatch2D(current, patch));
       },
     };
     this.projection = {

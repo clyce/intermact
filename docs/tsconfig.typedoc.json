@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "../packages/core/src/**/*.ts",
+    "../packages/render-three/src/**/*.ts",
+    "../packages/render-r3f/src/**/*.ts",
+    "../packages/react/src/**/*.ts"
+  ],
+  "exclude": ["**/*.{test,spec}.ts", "**/*.{test,spec}.tsx"]
+}

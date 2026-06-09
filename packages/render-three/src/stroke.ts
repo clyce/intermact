@@ -1,5 +1,18 @@
 import { BufferAttribute, BufferGeometry } from "three";
-import { cumulativeLengths, type SampledContour2D, type SampledPath2D } from "@intermact/core";
+import {
+  cumulativeLengths,
+  glyphLocalReveal,
+  pointAtDistance,
+  type GlyphRevealSpan,
+  type SampledContour2D,
+  type SampledPath2D,
+} from "@intermact/core";
+
+/** Per-glyph sequential stroke reveal (text `write()`). */
+export interface StrokeRevealOptions {
+  readonly contourGlyphIndex?: readonly number[];
+  readonly glyphWriteSpans?: readonly GlyphRevealSpan[];
+}
 
 /**
  * Stroke geometry as a world-unit ribbon (design.md §15). A polyline is
@@ -17,15 +30,29 @@ export function buildStrokeGeometry(
   width: number,
   revealStart = 0,
   revealEnd = 1,
+  revealOpts?: StrokeRevealOptions,
 ): BufferGeometry {
   const positions: number[] = [];
   const halfWidth = Math.max(width, 1e-5) / 2;
 
-  for (const contour of path.contours) {
-    const pts = trimContour(contour, revealStart, revealEnd);
-    const fullReveal = revealStart <= 0 && revealEnd >= 1;
+  path.contours.forEach((contour, ci) => {
+    let localStart = revealStart;
+    let localEnd = revealEnd;
+    if (revealOpts?.glyphWriteSpans && revealOpts.contourGlyphIndex) {
+      const gi = revealOpts.contourGlyphIndex[ci] ?? 0;
+      const span = revealOpts.glyphWriteSpans[gi];
+      if (span) {
+        localStart = glyphLocalReveal(revealStart, span);
+        localEnd = glyphLocalReveal(revealEnd, span);
+      } else {
+        localStart = 0;
+        localEnd = 0;
+      }
+    }
+    const pts = trimContour(contour, localStart, localEnd);
+    const fullReveal = localStart <= 0 && localEnd >= 1;
     appendRibbon(positions, pts, contour.closed && fullReveal, halfWidth);
-  }
+  });
 
   const geometry = new BufferGeometry();
   geometry.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
@@ -65,79 +92,104 @@ function trimContour(contour: SampledContour2D, start: number, end: number): num
   return out;
 }
 
-/** Point at arc-length distance `s` along a polyline (includes closing segment when `closed`). */
-function pointAtDistance(
-  points: Float32Array,
-  cumulative: Float32Array,
-  total: number,
-  closed: boolean,
-  s: number,
-): [number, number] {
-  const n = points.length >> 1;
-  if (n === 0) return [0, 0];
-  if (n === 1) return [points[0]!, points[1]!];
-  const dist = Math.max(0, Math.min(s, total));
+type Vec2 = [number, number];
 
-  if (closed && dist >= cumulative[n - 1]!) {
-    const segLen = total - cumulative[n - 1]!;
-    const t = segLen > 0 ? (dist - cumulative[n - 1]!) / segLen : 0;
-    const ax = points[(n - 1) * 2]!;
-    const ay = points[(n - 1) * 2 + 1]!;
-    return [ax + (points[0]! - ax) * t, ay + (points[1]! - ay) * t];
-  }
+const MITER_LIMIT = 1.25;
+const BEVEL_COS_THRESHOLD = 0.45;
+const CAP_SEGMENTS = 8;
 
-  let lo = 0;
-  let hi = n - 1;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (cumulative[mid]! < dist) lo = mid + 1;
-    else hi = mid;
-  }
-  const j = Math.max(1, lo);
-  const segLen = cumulative[j]! - cumulative[j - 1]!;
-  const t = segLen > 0 ? (dist - cumulative[j - 1]!) / segLen : 0;
-  const ax = points[(j - 1) * 2]!;
-  const ay = points[(j - 1) * 2 + 1]!;
-  const bx = points[j * 2]!;
-  const by = points[j * 2 + 1]!;
-  return [ax + (bx - ax) * t, ay + (by - ay) * t];
+function unit(dx: number, dy: number): Vec2 {
+  const len = Math.hypot(dx, dy) || 1;
+  return [dx / len, dy / len];
 }
 
-/** Expand a polyline (flat xy) into a ribbon of triangles (z=0). */
+/**
+ * Offset point at `cur` toward `side` (+1 left, −1 right) by `half`, using a
+ * miter join of the adjacent segment normals. Unlike a plain averaged-normal
+ * offset, the miter length keeps the ribbon at full width through corners
+ * instead of pinching. `prev`/`next` may be null at the ends of an open path.
+ */
+function offsetVertex(
+  prev: Vec2 | null,
+  cur: Vec2,
+  next: Vec2 | null,
+  side: number,
+  half: number,
+): Vec2 {
+  const dIn = prev ? unit(cur[0] - prev[0], cur[1] - prev[1]) : null;
+  const dOut = next ? unit(next[0] - cur[0], next[1] - cur[1]) : null;
+  const nIn: Vec2 | null = dIn ? [-dIn[1], dIn[0]] : null;
+  const nOut: Vec2 | null = dOut ? [-dOut[1], dOut[0]] : null;
+  if (nIn && nOut) {
+    let mx = nIn[0] + nOut[0];
+    let my = nIn[1] + nOut[1];
+    const mlen = Math.hypot(mx, my);
+    if (mlen < 1e-9) return [cur[0] + side * nIn[0] * half, cur[1] + side * nIn[1] * half];
+    mx /= mlen;
+    my /= mlen;
+    const cosHalf = mx * nIn[0] + my * nIn[1];
+    const dist =
+      cosHalf < BEVEL_COS_THRESHOLD
+        ? half
+        : Math.min(half / Math.max(cosHalf, 1e-6), half * MITER_LIMIT);
+    return [cur[0] + side * mx * dist, cur[1] + side * my * dist];
+  }
+  const n = nIn ?? nOut!;
+  return [cur[0] + side * n[0] * half, cur[1] + side * n[1] * half];
+}
+
+/** Triangle-fan a round cap (semicircle) from `center`, starting at `from`, toward `outward`. */
+function appendCap(out: number[], center: Vec2, from: Vec2, half: number, outward: Vec2): void {
+  const aStart = Math.atan2(from[1] - center[1], from[0] - center[0]);
+  const probe: Vec2 = [Math.cos(aStart + Math.PI / 2), Math.sin(aStart + Math.PI / 2)];
+  const sign = probe[0] * outward[0] + probe[1] * outward[1] >= 0 ? 1 : -1;
+  let prevX = from[0];
+  let prevY = from[1];
+  for (let s = 1; s <= CAP_SEGMENTS; s++) {
+    const a = aStart + sign * Math.PI * (s / CAP_SEGMENTS);
+    const x = center[0] + Math.cos(a) * half;
+    const y = center[1] + Math.sin(a) * half;
+    out.push(center[0], center[1], 0, prevX, prevY, 0, x, y, 0);
+    prevX = x;
+    prevY = y;
+  }
+}
+
+/**
+ * Expand a polyline (flat xy) into a ribbon of triangles (z=0) with miter joins
+ * and round end caps, so the stroke keeps a constant width along its whole
+ * length — including at sharp corners and at the start/end of open paths.
+ */
 function appendRibbon(out: number[], flat: number[], closed: boolean, halfWidth: number): void {
   const n = flat.length >> 1;
   if (n < 2) return;
-  const idx = (i: number) => (closed ? (i + n) % n : Math.max(0, Math.min(n - 1, i)));
+  const pts: Vec2[] = [];
+  for (let i = 0; i < n; i++) pts.push([flat[i * 2]!, flat[i * 2 + 1]!]);
 
-  const left: [number, number][] = [];
-  const right: [number, number][] = [];
+  const left: Vec2[] = [];
+  const right: Vec2[] = [];
   for (let i = 0; i < n; i++) {
-    const px = flat[idx(i - 1) * 2]!;
-    const py = flat[idx(i - 1) * 2 + 1]!;
-    const cx = flat[i * 2]!;
-    const cy = flat[i * 2 + 1]!;
-    const nx = flat[idx(i + 1) * 2]!;
-    const ny = flat[idx(i + 1) * 2 + 1]!;
-    let dx = nx - px;
-    let dy = ny - py;
-    const len = Math.hypot(dx, dy) || 1;
-    dx /= len;
-    dy /= len;
-    const ox = -dy * halfWidth;
-    const oy = dx * halfWidth;
-    left.push([cx + ox, cy + oy]);
-    right.push([cx - ox, cy - oy]);
+    const prev = closed ? pts[(i - 1 + n) % n]! : i > 0 ? pts[i - 1]! : null;
+    const next = closed ? pts[(i + 1) % n]! : i < n - 1 ? pts[i + 1]! : null;
+    left.push(offsetVertex(prev, pts[i]!, next, +1, halfWidth));
+    right.push(offsetVertex(prev, pts[i]!, next, -1, halfWidth));
   }
 
   const segCount = closed ? n : n - 1;
   for (let i = 0; i < segCount; i++) {
-    const a = i;
     const b = (i + 1) % n;
-    const la = left[a]!;
-    const ra = right[a]!;
+    const la = left[i]!;
+    const ra = right[i]!;
     const lb = left[b]!;
     const rb = right[b]!;
     out.push(la[0], la[1], 0, ra[0], ra[1], 0, rb[0], rb[1], 0);
     out.push(la[0], la[1], 0, rb[0], rb[1], 0, lb[0], lb[1], 0);
+  }
+
+  if (!closed) {
+    const endDir = unit(pts[n - 1]![0] - pts[n - 2]![0], pts[n - 1]![1] - pts[n - 2]![1]);
+    const startDir = unit(pts[0]![0] - pts[1]![0], pts[0]![1] - pts[1]![1]);
+    appendCap(out, pts[n - 1]!, left[n - 1]!, halfWidth, endDir);
+    appendCap(out, pts[0]!, right[0]!, halfWidth, startDir);
   }
 }

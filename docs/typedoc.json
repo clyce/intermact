@@ -1,0 +1,38 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "Intermact API Reference",
+  "readme": "none",
+  "entryPointStrategy": "packages",
+  "entryPoints": [
+    "../packages/core",
+    "../packages/render-three",
+    "../packages/render-r3f",
+    "../packages/react"
+  ],
+  "packageOptions": {
+    "entryPoints": ["src/index.ts"],
+    "exclude": ["**/*.{test,spec}.ts", "**/*.{test,spec}.tsx"]
+  },
+  "out": "reference",
+  "plugin": ["typedoc-plugin-markdown", "typedoc-vitepress-theme"],
+  "exclude": ["**/*.{test,spec}.ts", "**/*.{test,spec}.tsx"],
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "hideGenerator": true,
+  "sourceLinkTemplate": "https://github.com/intermact/intermact/blob/main/{path}#L{line}",
+  "externalSymbolLinkMappings": {
+    "@intermact/core": {
+      "Player": "/reference/@intermact/core/classes/Player",
+      "BuiltProgram": "/reference/@intermact/core/interfaces/BuiltProgram",
+      "ReadonlySignal": "/reference/@intermact/core/interfaces/ReadonlySignal",
+      "RenderSnapshot": "/reference/@intermact/core/interfaces/RenderSnapshot"
+    },
+    "@intermact/render-three": {
+      "ThreeSceneView": "/reference/@intermact/render-three/classes/ThreeSceneView"
+    },
+    "@types/three": {
+      "Color": "https://threejs.org/docs/#api/en/math/Color"
+    }
+  }
+}

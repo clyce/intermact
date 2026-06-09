@@ -52,6 +52,11 @@ Desktop.ini
 !.vscode/tasks.json
 !.vscode/launch.json
 
+# --- VitePress (docs site) ---
+docs/.vitepress/cache
+docs/.vitepress/dist
+docs/reference/
+
 # --- Optional tooling artifacts (not used yet; harmless if added later) ---
 storybook-static/
 stats.html

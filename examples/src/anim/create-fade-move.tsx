@@ -40,7 +40,7 @@ const program = createProgram(async (ctx) => {
 
 export function CreateFadeMoveDemo() {
   return (
-    <div style={{ height: 480 }}>
+    <div style={{ height: "100%" }}>
       <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );

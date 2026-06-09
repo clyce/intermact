@@ -3,14 +3,6 @@
  * derived objects, tweenSignal, and external store binding.
  */
 
-type SignalRegistrar = (sig: Signal<unknown>) => void;
-let signalRegistrar: SignalRegistrar | null = null;
-
-/** Hook used by the program build pass to auto-register created signals. */
-export function setSignalRegistrar(registrar: SignalRegistrar | null): void {
-  signalRegistrar = registrar;
-}
-
 /** Read-only signal interface. */
 export interface ReadonlySignal<T> {
   get(): T;
@@ -45,9 +37,11 @@ function trackDependency(sig: Signal<unknown>): void {
 }
 
 /**
- * Create a writable signal with the given initial value.
+ * Create a writable signal with the given initial value. Prefer
+ * {@link IntermactProgramContext.signal} during the build pass so signals are
+ * registered with the scene's {@link ReactiveEngine}.
  */
-export function signal<T>(initial: T): Signal<T> {
+export function createSignal<T>(initial: T): Signal<T> {
   let value = initial;
   const listeners = new Set<(v: T) => void>();
   const id = nextSignalId++ as SignalId;
@@ -73,8 +67,15 @@ export function signal<T>(initial: T): Signal<T> {
   };
 
   signalIds.set(sig, id);
-  signalRegistrar?.(sig as Signal<unknown>);
   return sig;
+}
+
+/**
+ * Create a writable signal (standalone; not auto-registered). During program
+ * build, use `ctx.signal` / `ctx.valueTracker` instead.
+ */
+export function signal<T>(initial: T): Signal<T> {
+  return createSignal(initial);
 }
 
 /** Shorthand for a numeric signal (Manim ValueTracker equivalent). */

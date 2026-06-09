@@ -30,6 +30,12 @@ export interface GeometryOverride {
   readonly fillRule?: "nonzero" | "evenodd";
 }
 
+/** Per-glyph stroke window on the global reveal timeline (sequential write). */
+export interface GlyphRevealSpan {
+  readonly start: number;
+  readonly end: number;
+}
+
 /** Per-frame runtime state for a 2D registered object. */
 export interface RuntimeState2D {
   readonly visible: boolean;
@@ -45,6 +51,8 @@ export interface RuntimeState2D {
   readonly geometryOverride?: GeometryOverride | null;
   /** Bumped when geometry is recomputed (by updaters), triggering resampling. */
   readonly geometryVersion: number;
+  /** Per-glyph stroke windows for sequential `write()` (set at compile time). */
+  readonly glyphWriteSpans?: readonly GlyphRevealSpan[];
 }
 
 /** A deep-partial update to a 2D runtime state. */
@@ -58,6 +66,7 @@ export interface RuntimeState2DPatch {
   styleOverrides?: Partial<ObjectStyle>;
   geometryOverride?: GeometryOverride | null;
   geometryVersion?: number;
+  glyphWriteSpans?: readonly GlyphRevealSpan[];
 }
 
 /** An immutable incremental update targeting one object's runtime state. */
@@ -121,5 +130,6 @@ export function applyPatch2D(state: RuntimeState2D, changes: RuntimeState2DPatch
     geometryOverride:
       changes.geometryOverride !== undefined ? changes.geometryOverride : state.geometryOverride,
     geometryVersion: changes.geometryVersion ?? state.geometryVersion,
+    glyphWriteSpans: changes.glyphWriteSpans ?? state.glyphWriteSpans,
   };
 }

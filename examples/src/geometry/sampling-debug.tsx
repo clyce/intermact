@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { circle, polygon, rectangle, xy, type IMObject2D } from "@intermact/core";
-import { GeometryView } from "../lib/SvgGeometry";
+import { IntermactCanvas } from "@intermact/react";
+import { samplingDebugProgram } from "../lib/geometryPreviewProgram";
 
 /**
  * `examples/geometry/sampling-debug` (dev-roadmap.md M2).
  *
  * Visualizes arc-length sample points, the AABB, and the earcut triangulation
- * mesh, with a slider for the sample count â€” a debugging aid for geometry.
+ * mesh through the real renderer, with a slider for the sample count.
  */
 const shapes: Record<string, IMObject2D> = {
   circle: circle({ radius: 1.2, style: { stroke: "#38bdf8", fill: "rgba(56,189,248,0.18)" } }),
@@ -28,12 +29,14 @@ export function SamplingDebugDemo() {
   const [samples, setSamples] = useState(48);
   const object = shapes[shape]!;
 
+  const program = useMemo(() => samplingDebugProgram(object, samples), [object, samples]);
+
   return (
     <div style={{ padding: 24 }}>
       <h2 style={{ marginTop: 0 }}>Sampling debug</h2>
       <p style={{ color: "#94a3b8", maxWidth: 680 }}>
-        Red dots are arc-length sample points, the dashed box is the AABB, purple lines are the
-        earcut triangulation.
+        Red dots are arc-length sample points, the orange box is the AABB, purple lines are the
+        earcut triangulation â€?all rendered through <code>IntermactCanvas</code>.
       </p>
       <div
         style={{
@@ -47,7 +50,7 @@ export function SamplingDebugDemo() {
         {Object.keys(shapes).map((key) => (
           <button
             key={key}
-            onClick={() => setShape(key)}
+            onClick={() => setShape(key as keyof typeof shapes)}
             style={{
               padding: "6px 12px",
               borderRadius: 6,
@@ -75,15 +78,9 @@ export function SamplingDebugDemo() {
           />
         </label>
       </div>
-      <GeometryView
-        object={object}
-        width={420}
-        height={420}
-        samples={samples}
-        showSamples
-        showBounds
-        showTriangulation
-      />
+      <div style={{ height: "100%", maxWidth: 420, borderRadius: 8, overflow: "hidden" }}>
+        <IntermactCanvas program={program} />
+      </div>
     </div>
   );
 }

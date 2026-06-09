@@ -11,6 +11,11 @@ export interface ObjectStyle {
   readonly stroke?: string;
   /** Fill color (CSS color string). */
   readonly fill?: string;
+  /**
+   * Wider underlay fill behind {@link fill} (glyph outline halo). Used instead
+   * of ribbon-stroking outline contours, which spikes at sharp corners.
+   */
+  readonly underlayFill?: string;
   /** Stroke width; world units unless declared as px (§15). */
   readonly lineWidth?: LineWidth;
   /** Overall opacity multiplier in [0,1]. */

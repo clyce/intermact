@@ -28,16 +28,21 @@ describe("render-three geometry builders (M3 smoke)", () => {
   it("closed contours reveal smoothly near completion (closing segment included)", () => {
     const c = circle({ radius: 1, samples: 64, style: { stroke: "#fff" } });
     const path = c.geometry.samplePath();
+    // Compare within the trimmed (open) regime so the constant per-end round-cap
+    // vertices cancel and the deltas reflect only revealed arc length.
+    const at50 = buildStrokeGeometry(path, 0.05, 0, 0.5);
     const at95 = buildStrokeGeometry(path, 0.05, 0, 0.95);
     const at99 = buildStrokeGeometry(path, 0.05, 0, 0.99);
-    const full = buildStrokeGeometry(path, 0.05, 0, 1);
+    const n50 = at50.getAttribute("position").count;
     const n95 = at95.getAttribute("position").count;
     const n99 = at99.getAttribute("position").count;
-    const nFull = full.getAttribute("position").count;
+    expect(n95).toBeGreaterThan(n50);
     expect(n99).toBeGreaterThan(n95);
-    // The final 1% should not jump straight to full length (closing segment counted).
-    expect(nFull - n99).toBeLessThan((nFull - n95) * 0.5);
-    expect(nFull).toBeGreaterThanOrEqual(n99);
+    // The final 4% should add no more geometry than a comparable earlier window
+    // (the closing segment is counted in arc length ⇒ no jump at the very end).
+    expect(n99 - n95).toBeLessThanOrEqual(n95 - n50);
+    // A fully revealed (closed) ribbon still produces geometry.
+    expect(buildStrokeGeometry(path, 0.05, 0, 1).getAttribute("position").count).toBeGreaterThan(0);
   });
 });
 

@@ -11,6 +11,9 @@ export default tseslint.config(
       "**/*.config.js",
       "**/*.config.ts",
       "**/coverage/**",
+      "docs/.vitepress/cache/**",
+      "docs/.vitepress/dist/**",
+      "docs/reference/**",
     ],
   },
   js.configs.recommended,
@@ -34,6 +37,16 @@ export default tseslint.config(
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/switch-exhaustiveness-check": "off",
+    },
+  },
+  {
+    files: ["packages/core/src/**/*.ts"],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        { name: "window", message: "core must not use DOM globals (design.md §3.1)." },
+        { name: "document", message: "core must not use DOM globals (design.md §3.1)." },
+      ],
     },
   },
   prettier,

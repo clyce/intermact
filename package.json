@@ -17,7 +17,11 @@
     "test:watch": "vitest",
     "depcruise": "depcruise packages --config .dependency-cruiser.cjs",
     "ci": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run depcruise && pnpm run build",
-    "dev:examples": "pnpm --filter @intermact/examples run dev"
+    "dev:examples": "pnpm --filter @intermact/examples run dev",
+    "gen:reference": "pnpm --filter @intermact/docs run gen:reference",
+    "dev:docs": "pnpm --filter @intermact/docs run dev",
+    "build:docs": "pnpm --filter @intermact/docs run build",
+    "preview:docs": "pnpm --filter @intermact/docs run preview"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

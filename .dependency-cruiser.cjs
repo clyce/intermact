@@ -38,6 +38,33 @@ module.exports = {
       to: { path: "(^|/)node_modules/(react|react-dom|@react-three)" },
     },
     {
+      name: "render-three-no-render-r3f",
+      comment: "render-three must not depend on render-r3f (layering).",
+      severity: "error",
+      from: { path: "^packages/render-three/src" },
+      to: { path: "^packages/render-r3f/src" },
+    },
+    {
+      name: "react-layered-deps",
+      comment: "react/* may only depend on core, render-three, render-r3f, and React ecosystem.",
+      severity: "error",
+      from: { path: "^packages/react/src" },
+      to: {
+        path: "^packages/(?!core|render-three|render-r3f)",
+        pathNot: ["^packages/react/src"],
+      },
+    },
+    {
+      name: "render-r3f-layered-deps",
+      comment: "render-r3f/* may only depend on core, render-three, and React/R3F.",
+      severity: "error",
+      from: { path: "^packages/render-r3f/src" },
+      to: {
+        path: "^packages/(?!core|render-three)",
+        pathNot: ["^packages/render-r3f/src"],
+      },
+    },
+    {
       name: "no-circular",
       comment: "No circular dependencies.",
       severity: "error",

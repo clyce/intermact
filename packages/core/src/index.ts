@@ -8,8 +8,8 @@
  * Modules are added milestone by milestone (see dev-docs/dev-roadmap.md §4).
  */
 
-/** Library version, mirrors the v0.1 (Phase-1 MVP) milestone gate. */
-export const VERSION = "0.1.0";
+/** Library version, mirrors the v0.2 (Phase-2 Math Toolbox) milestone gate. */
+export const VERSION = "0.2.0";
 
 export * from "./errors";
 export * from "./math";
@@ -19,6 +19,10 @@ export * from "./geometry";
 export * from "./animation";
 export * from "./scene";
 export * from "./layout";
+export * from "./text";
+export * from "./resource";
+export * from "./constructs";
+export * from "./interaction";
 export * from "./reactive";
 export * from "./random";
 export * from "./program";

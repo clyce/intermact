@@ -1,12 +1,4 @@
-import {
-  circle,
-  createProgram,
-  derived,
-  polyline,
-  polygon,
-  tweenSignal,
-  valueTracker,
-} from "@intermact/core";
+import { circle, createProgram, derived, polyline, polygon, tweenSignal } from "@intermact/core";
 import { IntermactCanvas } from "@intermact/react";
 
 /** M6 / design.md §8.2: tweenSignal drives a derived rectangle under a hyperbola. */
@@ -18,7 +10,7 @@ const program = createProgram(async (ctx) => {
   });
   ctx.mount(scene, ctx.createCamera2D(scene));
 
-  const t = valueTracker(2);
+  const t = ctx.valueTracker(2);
   const k = 25;
 
   const ax = scene.getAxes({ x: [0, 10], y: [0, 10] });
@@ -59,7 +51,7 @@ const program = createProgram(async (ctx) => {
 
 export function ValueTrackerDemo() {
   return (
-    <div style={{ height: 480 }}>
+    <div style={{ height: "100%" }}>
       <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );

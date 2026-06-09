@@ -2,6 +2,9 @@ import { Group, Mesh, type MeshBasicMaterial } from "three";
 import {
   cumulativeLengths,
   findTrait,
+  GLYPH_WRITE_COMPLETE_EPS,
+  glyphLocalFill,
+  isGlyphWriteComplete,
   type IMObject2D,
   type LineWidth,
   type ObjectRenderState,
@@ -11,6 +14,7 @@ import {
 } from "@intermact/core";
 import { buildStrokeGeometry } from "./stroke";
 import { buildFillGeometry } from "./fill";
+import { parseColor } from "./color";
 import { makeBasicMaterial } from "./material";
 
 /** Context the renderer passes to object views (e.g. for px→world line width). */
@@ -41,11 +45,16 @@ export class ThreeObjectView {
   readonly group = new Group();
   private strokeMesh: Mesh | null = null;
   private fillMesh: Mesh | null = null;
+  private fillGroupMeshes: Mesh[] = [];
+  private underlayMesh: Mesh | null = null;
 
   private lastRevealStart = NaN;
   private lastRevealEnd = NaN;
   private lastWidth = NaN;
   private lastGeometryVersion = -1;
+  private lastStrokeColor = "";
+  private lastFillColor = "";
+  private lastUnderlayColor = "";
 
   constructor(private object: IMObject2D) {}
 
@@ -63,8 +72,12 @@ export class ThreeObjectView {
     const width = resolveLineWidth(style.lineWidth, ctx);
     const geometryChanged = state.geometryVersion !== this.lastGeometryVersion;
 
+    this.updateUnderlayFill(style, state, geometryChanged);
     this.updateFill(style, state, geometryChanged);
     this.updateStroke(style, state, width, geometryChanged);
+    if (this.underlayMesh) this.underlayMesh.renderOrder = state.transform.zIndex - 0.05;
+    if (this.fillMesh) this.fillMesh.renderOrder = state.transform.zIndex;
+    if (this.strokeMesh) this.strokeMesh.renderOrder = state.transform.zIndex + 0.1;
     this.lastGeometryVersion = state.geometryVersion;
   }
 
@@ -96,19 +109,101 @@ export class ThreeObjectView {
     return raw ? [...raw] : null;
   }
 
+  private resolveUnderlayContours(state: ObjectRenderState["state"]): SampledContour2D[] | null {
+    if (state.geometryOverride) return null;
+    const path = this.object.geometry.sampleUnderlayPath?.() ?? null;
+    return path ? [...path.contours] : null;
+  }
+
+  private updateUnderlayFill(
+    style: ObjectStyle,
+    state: ObjectRenderState["state"],
+    geometryChanged: boolean,
+  ): void {
+    const contours = this.resolveUnderlayContours(state);
+    if (!contours || !style.underlayFill) {
+      this.disposeUnderlayFill();
+      return;
+    }
+    const alpha = state.opacity * state.fillProgress;
+    if (!this.underlayMesh || geometryChanged) {
+      this.disposeUnderlayFill();
+      const geometry = buildFillGeometry(contours);
+      const material = makeBasicMaterial(style.underlayFill, alpha);
+      const mesh = new Mesh(geometry, material);
+      mesh.renderOrder = state.transform.zIndex - 0.05;
+      this.underlayMesh = mesh;
+      this.group.add(mesh);
+      this.lastUnderlayColor = style.underlayFill;
+    } else {
+      const material = this.underlayMesh.material as MeshBasicMaterial;
+      const { color, alpha: parsedAlpha } = parseColor(style.underlayFill);
+      if (style.underlayFill !== this.lastUnderlayColor) {
+        material.color.copy(color);
+        this.lastUnderlayColor = style.underlayFill;
+      }
+      material.opacity = parsedAlpha * alpha;
+    }
+  }
+
   private updateFill(
     style: ObjectStyle,
     state: ObjectRenderState["state"],
     geometryChanged: boolean,
   ): void {
+    const fill = findTrait(this.object.traits, "fill");
+    const groups = state.geometryOverride
+      ? null
+      : (fill?.fillGroups?.() ?? null);
     const contours = this.resolveFillContours(state);
     if (!contours || !style.fill) {
       this.disposeFill();
       return;
     }
+
+    const spans = state.glyphWriteSpans;
+    const fillOverlap = 0.2;
+    const writeComplete = isGlyphWriteComplete(state.revealEnd, state.fillProgress, spans);
+
+    // Keep per-glyph fill groups for the whole write so completed lines do not
+    // flash/disappear when switching to a merged mesh at writeComplete.
+    if (groups && groups.length > 0 && spans?.length) {
+      this.disposeFillMesh();
+      while (this.fillGroupMeshes.length < groups.length) {
+        const mesh = new Mesh(undefined, makeBasicMaterial(style.fill, 1));
+        mesh.renderOrder = state.transform.zIndex;
+        this.fillGroupMeshes.push(mesh);
+        this.group.add(mesh);
+      }
+      while (this.fillGroupMeshes.length > groups.length) {
+        const mesh = this.fillGroupMeshes.pop()!;
+        this.group.remove(mesh);
+        mesh.geometry.dispose();
+        (mesh.material as MeshBasicMaterial).dispose();
+      }
+      groups.forEach((group, gi) => {
+        const mesh = this.fillGroupMeshes[gi]!;
+        const localFill = writeComplete
+          ? 1
+          : glyphLocalFill(state.fillProgress, spans[gi] ?? { start: 0, end: 1 }, fillOverlap);
+        if (!mesh.geometry || geometryChanged) {
+          mesh.geometry?.dispose();
+          mesh.geometry = buildFillGeometry(group, [group]);
+        }
+        const material = mesh.material as MeshBasicMaterial;
+        const { color, alpha } = parseColor(style.fill);
+        if (style.fill !== this.lastFillColor) material.color.copy(color);
+        material.opacity = alpha * state.opacity * localFill;
+        mesh.visible = localFill > 0.001;
+      });
+      this.lastFillColor = style.fill;
+      return;
+    }
+
+    this.disposeFillGroupMeshes();
     if (!this.fillMesh || geometryChanged) {
-      this.disposeFill();
-      const geometry = buildFillGeometry(contours);
+      this.disposeFillMesh();
+      const geometry = buildFillGeometry(contours, groups ?? undefined);
       const material = makeBasicMaterial(style.fill, state.opacity * state.fillProgress);
       const mesh = new Mesh(geometry, material);
       mesh.renderOrder = state.transform.zIndex;
@@ -116,9 +211,39 @@ export class ThreeObjectView {
       this.group.add(mesh);
     } else {
       const material = this.fillMesh.material as MeshBasicMaterial;
-      const { alpha } = splitOpacity(style.fill);
+      const { color, alpha } = parseColor(style.fill);
+      if (style.fill !== this.lastFillColor) {
+        material.color.copy(color);
+        this.lastFillColor = style.fill;
+      }
       material.opacity = alpha * state.opacity * state.fillProgress;
     }
+  }
+
+  /**
+   * Stroke color for rendering. Explicit `style.stroke` always wins. When a glyph
+   * is fill-only, Manim-style `write()` / Create still needs a
+   * visible outline during the reveal phase (DrawBorderThenFill) — borrow the
+   * fill color until both reveal and fill are complete.
+   */
+  private resolveStrokeColor(
+    style: ObjectStyle,
+    state: ObjectRenderState["state"],
+  ): string | undefined {
+    if (style.stroke) return style.stroke;
+    const writeComplete = isGlyphWriteComplete(
+      state.revealEnd,
+      state.fillProgress,
+      state.glyphWriteSpans,
+    );
+    const revealing =
+      !writeComplete &&
+      (state.revealEnd < 1 - GLYPH_WRITE_COMPLETE_EPS ||
+        state.fillProgress < 1 - GLYPH_WRITE_COMPLETE_EPS);
+    if (!revealing) return undefined;
+    if (style.underlayFill) return style.underlayFill;
+    if (style.fill) return style.fill;
+    return undefined;
   }
 
   private updateStroke(
@@ -128,7 +253,8 @@ export class ThreeObjectView {
     geometryChanged: boolean,
   ): void {
     const path = this.resolveStrokePath(state);
-    if (!path || !style.stroke) {
+    const strokeColor = this.resolveStrokeColor(style, state);
+    if (!path || !strokeColor) {
       this.disposeStroke();
       return;
     }
@@ -136,15 +262,43 @@ export class ThreeObjectView {
       state.revealStart !== this.lastRevealStart || state.revealEnd !== this.lastRevealEnd;
     const widthChanged = width !== this.lastWidth;
 
+    const fillTrait = findTrait(this.object.traits, "fill");
+    const layout = findTrait(this.object.traits, "text-layout");
+    const writeComplete = isGlyphWriteComplete(
+      state.revealEnd,
+      state.fillProgress,
+      state.glyphWriteSpans,
+    );
+    const contourGlyphIndex =
+      layout?.contourGlyphIndex() ?? fillTrait?.contourGlyphIndex?.() ?? undefined;
+    const revealOpts =
+      !writeComplete &&
+      state.glyphWriteSpans?.length &&
+      contourGlyphIndex?.length
+        ? {
+            contourGlyphIndex,
+            glyphWriteSpans: state.glyphWriteSpans,
+          }
+        : undefined;
+
     if (!this.strokeMesh || geometryChanged || revealChanged || widthChanged) {
-      const geometry = buildStrokeGeometry(path, width, state.revealStart, state.revealEnd);
+      const geometry = buildStrokeGeometry(
+        path,
+        width,
+        state.revealStart,
+        state.revealEnd,
+        revealOpts,
+      );
       if (this.strokeMesh) {
         this.strokeMesh.geometry.dispose();
         this.strokeMesh.geometry = geometry;
-        (this.strokeMesh.material as MeshBasicMaterial).opacity =
-          splitOpacity(style.stroke).alpha * state.opacity;
+        const { color, alpha } = parseColor(strokeColor);
+        const material = this.strokeMesh.material as MeshBasicMaterial;
+        material.color.copy(color);
+        material.opacity = alpha * state.opacity;
+        this.lastStrokeColor = strokeColor;
       } else {
-        const material = makeBasicMaterial(style.stroke, state.opacity);
+        const material = makeBasicMaterial(strokeColor, state.opacity);
         const mesh = new Mesh(geometry, material);
         mesh.renderOrder = state.transform.zIndex + 0.1;
         this.strokeMesh = mesh;
@@ -154,8 +308,13 @@ export class ThreeObjectView {
       this.lastRevealEnd = state.revealEnd;
       this.lastWidth = width;
     } else {
-      (this.strokeMesh.material as MeshBasicMaterial).opacity =
-        splitOpacity(style.stroke).alpha * state.opacity;
+      const material = this.strokeMesh.material as MeshBasicMaterial;
+      const { color, alpha } = parseColor(strokeColor);
+      if (strokeColor !== this.lastStrokeColor) {
+        material.color.copy(color);
+        this.lastStrokeColor = strokeColor;
+      }
+      material.opacity = alpha * state.opacity;
     }
   }
 
@@ -167,7 +326,7 @@ export class ThreeObjectView {
     this.strokeMesh = null;
   }
 
-  private disposeFill(): void {
+  private disposeFillMesh(): void {
     if (!this.fillMesh) return;
     this.group.remove(this.fillMesh);
     this.fillMesh.geometry.dispose();
@@ -175,18 +334,31 @@ export class ThreeObjectView {
     this.fillMesh = null;
   }
 
+  private disposeFillGroupMeshes(): void {
+    for (const mesh of this.fillGroupMeshes) {
+      this.group.remove(mesh);
+      mesh.geometry.dispose();
+      (mesh.material as MeshBasicMaterial).dispose();
+    }
+    this.fillGroupMeshes = [];
+  }
+
+  private disposeFill(): void {
+    this.disposeFillMesh();
+    this.disposeFillGroupMeshes();
+  }
+
+  private disposeUnderlayFill(): void {
+    if (!this.underlayMesh) return;
+    this.group.remove(this.underlayMesh);
+    this.underlayMesh.geometry.dispose();
+    (this.underlayMesh.material as MeshBasicMaterial).dispose();
+    this.underlayMesh = null;
+  }
+
   dispose(): void {
     this.disposeStroke();
+    this.disposeUnderlayFill();
     this.disposeFill();
   }
-}
-
-function splitOpacity(css: string): { alpha: number } {
-  const rgba = css.match(/rgba?\(([^)]+)\)/i);
-  if (rgba) {
-    const parts = rgba[1]!.split(",");
-    const a = parts[3] !== undefined ? parseFloat(parts[3]) : 1;
-    return { alpha: Number.isFinite(a) ? a : 1 };
-  }
-  return { alpha: 1 };
 }

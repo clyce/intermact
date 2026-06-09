@@ -1,14 +1,17 @@
 import { IntermactError } from "../errors";
 import { type AbsXY, clamp, lerp, type Vec2 } from "../math/vec";
+import { findTrait, hasTrait } from "../object/traits";
 import { type IMObject2D } from "../object/types";
 import {
   type GeometryOverride,
   normalizeScale,
+  type GlyphRevealSpan,
   type RuntimeState2DPatch,
   type StatePatch,
 } from "../runtime/state";
+import { computeGlyphRevealSpans } from "../text/write-spans";
 import { type SignalId } from "../reactive/signal";
-import { alignMorphContours } from "./morph";
+import { buildMatchingFrames, buildMorphFrames, normalizedContoursOf } from "./morph";
 import { type Easing, resolveEasing } from "./easing";
 import { type AnimationSpec, type PropertyPath } from "./spec";
 
@@ -22,6 +25,16 @@ import { type AnimationSpec, type PropertyPath } from "./spec";
  * "projected" value cursor per (target, property). Each track therefore carries
  * concrete from/to and is self-contained.
  */
+
+/**
+ * Geometry-version values emitted by morph tracks. A morph rewrites an object's
+ * contours every frame; the renderer rebuilds its meshes whenever
+ * `geometryVersion` changes (the same signal updaters use). The base offset keeps
+ * morph versions well clear of the small increments reactive updaters produce, so
+ * the two never collide on the same object.
+ */
+const MORPH_GEOMETRY_VERSION_BASE = 1_000_000;
+const MORPH_GEOMETRY_VERSION_SPAN = 1_000_000;
 
 /** A compiled, seekable unit of animation. `evaluate` is a pure function. */
 export interface Track {
@@ -62,6 +75,8 @@ export interface SignalTrack {
 /** Optional compile-time context for specs that need object definitions. */
 export interface CompileContext {
   readonly getObject: (id: string) => IMObject2D | undefined;
+  /** Merge a patch into the object's baseline runtime state at compile time. */
+  readonly applyBaselinePatch?: (targetId: string, patch: RuntimeState2DPatch) => void;
 }
 
 /** Result of compiling one spec subtree. */
@@ -199,7 +214,10 @@ export function compileSpec(
     }
     case "fade": {
       const property: PropertyPath = { type: "opacity" };
-      const from = projection.read(spec.targetId, property);
+      if (spec.from !== undefined) {
+        context?.applyBaselinePatch?.(spec.targetId, { opacity: spec.from });
+      }
+      const from = spec.from ?? projection.read(spec.targetId, property);
       const track = makeTweenTrack({
         id: ids.next("track"),
         targetId: spec.targetId,
@@ -304,10 +322,37 @@ export function compileSpec(
     }
     case "create": {
       // Create draws the stroke on (revealEnd 0->1), then reveals the fill
-      // (fillProgress 0->1). The object's initial state is set hidden by the
-      // `create()` factory so nothing shows before this track starts (§11).
+      // (fillProgress 0->1). Baseline hidden state is applied at compile time
+      // when this animation is played into the Storyboard (§11).
+      const obj = context?.getObject(spec.targetId);
+      const hasFill = Boolean(obj?.style?.fill) && obj && hasTrait(obj.traits, "fill");
+      const layout = obj ? findTrait(obj.traits, "text-layout") : undefined;
+      let glyphWriteSpans: GlyphRevealSpan[] | undefined;
+      if (layout && spec.stroke?.mode !== "contour-parallel") {
+        const direction = spec.stroke?.direction ?? "ltr";
+        const order =
+          direction === "rtl" ? [...layout.glyphOrder()].reverse() : layout.glyphOrder();
+        const temporal = computeGlyphRevealSpans(
+          order.length,
+          spec.stroke?.glyphOverlap ?? 0,
+          direction,
+        );
+        glyphWriteSpans = [];
+        order.forEach((gi, i) => {
+          glyphWriteSpans![gi] = temporal[i]!;
+        });
+      }
+      context?.applyBaselinePatch?.(spec.targetId, {
+        revealStart: 0,
+        revealEnd: 0,
+        fillProgress: hasFill ? 0 : 1,
+        ...(glyphWriteSpans ? { glyphWriteSpans } : {}),
+      });
       const tracks: Track[] = [];
       const revealProp: PropertyPath = { type: "reveal" };
+      const fillProp: PropertyPath = { type: "fill" };
+      projection.write(spec.targetId, revealProp, 0);
+      if (hasFill) projection.write(spec.targetId, fillProp, 0);
       const strokePortion = spec.fill ? 0.6 : 1;
       const strokeDuration = spec.duration * strokePortion;
       tracks.push(
@@ -354,23 +399,48 @@ export function compileSpec(
           spec,
         );
       }
+      const easeFn = resolveEasing(spec.easing ?? "linear");
+      const sampleCount = spec.sampleCount ?? 64;
+
       if (spec.strategy === "cross-fade") {
-        const opacityProp: PropertyPath = { type: "opacity" };
-        const track = makeTweenTrack({
+        // Single-object cross-fade = dissolve: fade source out, swap geometry,
+        // fade target in. (True overlap needs two objects; see docs/morph.)
+        const fromGeo = normalizedContoursOf(source).map((c) => ({
+          points: c.points,
+          closed: c.closed,
+        }));
+        const toGeo = normalizedContoursOf(spec.toObject).map((c) => ({
+          points: c.points,
+          closed: c.closed,
+        }));
+        const track: Track = {
           id: ids.next("track"),
           targetId: spec.targetId,
-          property: opacityProp,
-          from: projection.read(spec.targetId, opacityProp) ?? 1,
-          to: 0,
           start: startTime,
           duration: spec.duration,
           easing: spec.easing ?? "linear",
-        });
+          evaluate(localProgress: number): StatePatch {
+            const eased = easeFn(clamp(localProgress, 0, 1));
+            const firstHalf = eased < 0.5;
+            const changes: RuntimeState2DPatch = {
+              opacity: Math.abs(2 * eased - 1),
+              geometryOverride: { contours: firstHalf ? fromGeo : toGeo },
+              // Signal the renderer to rebuild meshes when the geometry swaps.
+              geometryVersion: firstHalf ? MORPH_GEOMETRY_VERSION_BASE : MORPH_GEOMETRY_VERSION_BASE + 1,
+            };
+            if (!spec.preserveStyle) {
+              changes.styleOverrides = firstHalf ? source.style : spec.toObject.style;
+            }
+            return { targetId: spec.targetId, changes };
+          },
+        };
         return { tracks: [track], signalTracks: [], effects: [], duration: spec.duration };
       }
-      const sampleCount = spec.sampleCount ?? 64;
-      const aligned = alignMorphContours(source, spec.toObject, sampleCount);
-      const easeFn = resolveEasing(spec.easing ?? "linear");
+
+      const aligned =
+        spec.strategy === "matching"
+          ? buildMatchingFrames(source, spec.toObject, spec.matchBy, sampleCount)
+          : buildMorphFrames(source, spec.toObject, spec.strategy, sampleCount);
       const track: Track = {
         id: ids.next("track"),
         targetId: spec.targetId,
@@ -380,7 +450,15 @@ export function compileSpec(
         evaluate(localProgress: number): StatePatch {
           const eased = easeFn(clamp(localProgress, 0, 1));
           const geometryOverride = lerpContours(aligned.from, aligned.to, aligned.closed, eased);
-          const changes: RuntimeState2DPatch = { geometryOverride };
+          // The interpolated contours change every frame, but `geometryVersion`
+          // (not the override identity) is what tells the renderer to rebuild its
+          // meshes. Derive a version from progress so it varies while morphing and
+          // settles to a stable value at the endpoints (avoids per-frame rebuilds
+          // once the morph has finished).
+          const changes: RuntimeState2DPatch = {
+            geometryOverride,
+            geometryVersion: MORPH_GEOMETRY_VERSION_BASE + Math.round(eased * MORPH_GEOMETRY_VERSION_SPAN),
+          };
           if (!spec.preserveStyle && eased >= 1) {
             changes.styleOverrides = spec.toObject.style;
           }

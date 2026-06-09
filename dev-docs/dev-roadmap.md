@@ -43,7 +43,6 @@ flowchart TB
 每层在前一层之上扩展，且不破坏前一层接口契约（`design.md §1.1`）。每层结束都产出**可发布版本 + 可运行示例集**。
 
 ## 2. 里程碑依赖图谱
-
 这是路线图的核心——里程碑之间的依赖 DAG。箭头表示"被依赖 → 依赖方"。关键路径以粗体语义标注（`crit`）。
 
 ```mermaid
@@ -134,7 +133,7 @@ gantt
     M4 基础动画（数据+解释器）     :m4, after m1, 17d
     M6 响应式最小集              :m6, after m1, 10d
     M3 R3F 渲染适配             :crit, m3, after m2, 17d
-    M5 坐标系与轴               :m5, after m4, 10d
+    M5 坐标系与轴               :m5, after m2 m4, 10d
     ◆ v0.1 验收与示例           :milestone, l1, after m3 m5 m6, 0d
 
     section 二·数理工具箱（v0.2）
@@ -161,7 +160,30 @@ gantt
 
 **阶段目标**：跑通"声明对象 → 注册场景 → 构建可 seek 时间线 → 实时渲染 → 拖动进度条/调参"的最小闭环，复刻 Manim 基础体验且具备 Web 交互雏形。
 
-### M0 · 工程基座 `crit`
+### 4.0 Phase-1 完成状态（2026-06-06）
+
+| 里程碑 | 状态 | 示例交付 | CI / 测试 |
+| --- | --- | --- | --- |
+| M0 工程基座 | ✅ 已完成 | `_template/empty-canvas`、`_smoke/static-circle` | depcruise + build |
+| M1 核心模型/时间线/Player | ✅ 已完成 | `timeline/*`（3） | 快照测试纳入 `pnpm run test` |
+| M2 2D 几何与采样 | ✅ 已完成 | `geometry/*`（2） | 几何单测 12+ 项 |
+| M3 R3F 渲染适配 | ✅ 已完成 | `render/*`（3） | `scene-view` smoke |
+| M4 基础动画 | ✅ 已完成 | `anim/*`（3） | `animations.test.ts` |
+| M5 坐标系与轴 | ✅ 已完成 | `coords/*`（3）；API：`getAxes` | `coordinate-transform` 单测 |
+| M6 响应式最小集 | ✅ 已完成 | `reactive/*`（2） | `reactive.test.ts` |
+| ◆ L1 v0.1 验收 | ✅ 已完成 | `l1/basic-2d`、`l1/interactive-sine` | `pnpm run ci` 全绿（67 tests） |
+
+**文档**：Phase-1 使用者文档已落地为 VitePress 站点（`docs/`，`pnpm run dev:docs`），覆盖指南、**API Reference**（TypeDoc 从 `packages/*/src` TSDoc 生成至 `docs/reference/`）、示例索引与 v0.1 验收清单；架构契约仍以本仓库 `design.md` 为准。
+
+**与设计稿的主要偏差**（详见 `design.md §0.1`）：arc-length morph 作 L1 兜底（完整 matching→M9）；`getAxes` 取代 `showAxes/hideAxes`；`decimalNumber` 示例用 `xy` 非 `uv` HUD。
+
+**评审与清偿**（2026-06-08）：Phase-1 系统性代码评审、已解决问题与关键决策见 [`phase-1-review.md` §11.10](./phase-1-review.md#1110-清偿记录与决策摘要2026-06-08)（含 P0–P2 清偿状态与 Phase-2 入口待办）。
+
+**下一阶段**：Phase-2（v0.2 数理工具箱）已于 2026-06 完成（M7–M12 全部 ✅，详见 §5.0 与 `design.md §0.2`）。下一步进入 Phase-3 **M13 PCG 核心**（§6），关键路径 `M12 → M13`。
+
+### M0 · 工程基座 `crit` ✅
+
+> **状态**：已完成（2026-06）。
 
 - **目标**：建立 monorepo、构建链、测试与 CI，落地 `design.md §3.4` 的包边界与 `§3.1` 的依赖规则。
 - **依赖**：无。
@@ -175,7 +197,9 @@ gantt
   - `examples/_template/empty-canvas` — 最小空 Canvas 模板，验证启动、热更新、构建产物。
   - `examples/_smoke/static-circle` — 仅渲染一个静态圆的烟雾测试（不依赖时间线/动画），作为 CI 冒烟用例。
 
-### M1 · 核心模型 / 时间线 / Player `crit`
+### M1 · 核心模型 / 时间线 / Player `crit` ✅
+
+> **状态**：已完成（2026-06）。
 
 - **目标**：实现不可变对象模型、trait/capability、不可变 RuntimeState，以及**保留模 Storyboard + 可 seek Player**（`design.md §3.2、§4、§11.1、§11.3`）。
 - **依赖**：M0。
@@ -191,7 +215,9 @@ gantt
   - `examples/timeline/headless-eval` — 在 Node 中无头构建 Storyboard 并对采样 `t` 打印 RuntimeState，作为确定性快照基线。
   - `examples/timeline/markers-slides` — 用 `marker` 做幻灯片式跳章（`jumpToMarker`）。
 
-### M2 · 2D 几何与采样 `crit`
+### M2 · 2D 几何与采样 `crit` ✅
+
+> **状态**：已完成（2026-06）。
 
 - **目标**：2D 图元工厂与几何采样（`design.md §5`）。
 - **依赖**：M1。
@@ -202,7 +228,9 @@ gantt
   - `examples/geometry/primitives-gallery` — 全部 2D 图元一览（含带洞多边形、复合贝塞尔）。
   - `examples/geometry/sampling-debug` — 可视化弧长采样点、bounds 与三角化网格，辅助调试。
 
-### M3 · R3F 渲染适配 `crit`
+### M3 · R3F 渲染适配 `crit` ✅
+
+> **状态**：已完成（2026-06）。
 
 - **目标**：把 RenderSnapshot 映射到 R3F/Three，落地渲染管线难点（`design.md §15`）。
 - **依赖**：M2。
@@ -217,7 +245,9 @@ gantt
   - `examples/render/zorder-transparency` — z 序与半透明排序边界用例。
   - `examples/render/dpi-resize` — HiDPI 与容器 resize 下 `fit` 策略不失真。
 
-### M4 · 基础动画（数据 + 解释器）
+### M4 · 基础动画（数据 + 解释器） ✅
+
+> **状态**：已完成（2026-06）。
 
 - **目标**：Create/Fade/Move/Rotate/Scale/Tween，全部以 `AnimationSpec` 表达并编译为 Track（`design.md §11`）。
 - **依赖**：M1、M2。
@@ -229,7 +259,9 @@ gantt
   - `examples/anim/sequence-parallel-stagger` — 串行/并行/错峰（stagger）编排对照。
   - `examples/anim/easing-gallery` — 各 easing 曲线效果对照。
 
-### M5 · 坐标系与轴
+### M5 · 坐标系与轴 ✅
+
+> **状态**：已完成（2026-06）。轴 API 为 `Scene.getAxes(props)`（见 `design.md §0.1` v0.1.1 修订）。
 
 - **目标**：cartesian 2D 坐标系、abs/rel/fit 转换、`getAxes` + RegisteredObject 动画（`design.md §7.2、§9.1`）。
 - **依赖**：M2、M4。
@@ -241,7 +273,9 @@ gantt
   - `examples/coords/fit-strategies` — contain/cover/stretch 与 abs↔rel 往返可视化。
   - `examples/coords/polar-scene` — 极坐标场景与定位。
 
-### M6 · 响应式最小集
+### M6 · 响应式最小集 ✅
+
+> **状态**：已完成（2026-06）。
 
 - **目标**：`signal/computed/valueTracker` + `derived/addUpdater`（`design.md §8`）。
 - **依赖**：M1。
@@ -252,94 +286,136 @@ gantt
   - `examples/reactive/value-tracker` — `tweenSignal` 驱动 `derived`（双曲线内接矩形，对应 `design.md §8.2`）。
   - `examples/reactive/leva-binding` — Leva 参数绑定信号、只更新参数不重建 program（`design.md §19.2` 精简版）。
 
-### ◆ v0.1 验收（DoD）
+### ◆ v0.1 验收（DoD） ✅
 
-- 可运行示例：基础 2D（Create/Move/Tween）+ 交互函数曲线（拖 Leva 调参，曲线实时重算）。
-- 进度条可拖动 seek，结果确定；时间线快照测试纳入 CI。
-- `design.md §19.1、§19.2` 示例可跑通。
+> **状态**：已完成（2026-06）。在线验收清单：`docs/project/v01-checklist.md`。
+
+- [x] 可运行示例：基础 2D（Create/Move/Tween）+ 交互函数曲线（拖 Leva 调参，曲线实时重算）。
+- [x] 进度条可拖动 seek，结果确定；时间线快照测试纳入 CI。
+- [x] `design.md §19.1、§19.2` 示例可跑通（`l1/basic-2d`、`l1/interactive-sine`）。
+- [x] `pnpm run ci` 全绿（lint + typecheck + 67 vitest + depcruise + build）。
+- [x] Phase-1 使用者文档（VitePress `docs/`）已发布初版。
 
 ## 5. 阶段二 · 数理工具箱（v0.2）
 
 **阶段目标**：在 MVP 之上提供数理可视化刚需构件与公式动画能力，达到"能讲清一节微积分/线性代数"的表达力，并让交互探索成为一等能力。
 
-### M7 · Scale 与刻度
+### 5.0 Phase-2 进度
+
+| 里程碑 | 状态 | 示例交付 | 测试 |
+| --- | --- | --- | --- |
+| M7 Scale 与刻度 | ✅ 已完成 | `scale/*`（2） | `scale.test.ts`（12 项） |
+| M8 数理构件库 | ✅ 已完成 | `math/*`（5） | `constructs.test.ts`（14 项） |
+| M9 Morph（含分部匹配） | ✅ 已完成 | `morph/*`（3） | `morph-strategies.test.ts`（8 项） |
+| M10 Text / LaTeX 管线 | ✅ 已完成 | `text/*`、`latex/*`（3） | `text.test.ts`（11 项） |
+| M11 交互系统 | ✅ 已完成 | `interaction/*`（3） | `interaction.test.ts`（6+3 项） |
+| M12 布局 + Inspector | ✅ 已完成 | `layout/*`、`devtools/*`（3） | `layout.test.ts`（11 项） |
+| ◆ L2 v0.2 验收 | ✅ 已完成 | 见 §「◆ v0.2 验收（DoD）」 | `pnpm run ci` 全绿（135 tests） |
+
+**验收后缺陷修复 / 打磨（2026-06-08，示例联调）**：详见 `design.md §0.2`「Phase-2 验收后缺陷修复 / 打磨」。摘要：
+- **Examples 卡 "Building…"**：`@intermact/core` 在示例 dev server 被双实例加载（`src` 与 `dist` 各一份）致响应式 signal 注册表（模块级 `WeakMap`）不互通 → `examples/vite.config.ts` 增 `resolve.alias` 锁定单一 `src` 实例；`useIntermactPlayer` 对构建失败 `.catch` 报错而非静默。
+- **Morph 无动画**：morph 每帧改 `geometryOverride` 但不动 `geometryVersion`，而渲染器仅按版本号重建几何 → `animation/track.ts` 写入随进度变化的 `geometryVersion`；`group2D` 须显式顶层 `style`（修 `matching-shapes` 黑屏）；新增 `Caption` 组件为各 demo 加说明。
+- **Text/LaTeX 笔触粗细不一**：改为常量笔宽**轮廓字形**（新增 `geometry/stroke-outline.ts`），支持实心/空心/描边填充三态与勾线色/填充色分离；重写 `triangulate` 以正确处理多个不相连带洞字形；`appendRibbon` 加 miter join + 圆头帽统一描边宽度。
+
+### M7 · Scale 与刻度 ✅
+
+> **状态**：已完成（2026-06）。`Scale` 落地于 `packages/core/src/math/scale.ts`。
 
 - **目标**：linear/log/pow/time Scale + ticks/format（`design.md §7.3`）。
 - **依赖**：v0.1（L1）。
-- **交付物**：`Scale` 接口与四类实现、`ticks`、`tickFormat`、`invert`。
-- **退出标准**：各 Scale 正反映射与刻度单测通过；log 边界、time 跨度用例正确。
+- **交付物**：`Scale` 接口与四类实现、`ticks`、`tickFormat`、`invert`；附带 `numericTicks`/`tickStep`/`timeTicks` 工具（供 M8 轴刻度复用）。
+- **退出标准**：各 Scale 正反映射与刻度单测通过；log 边界、time 跨度用例正确。**已满足**（`scale.test.ts` 12 项全绿）。
+- **与设计稿对齐**：接口签名与 `design.md §7.3` 一致；刻度用 D3 nice-number 算法；`timeScale` 刻度按 UTC 日历对齐。**偏差**：`tickFormat` 的 `spec` 仅支持最小子集（`"%"`、`".<n>f"`），完整 D3 format mini-language未实现（按需在 M8/M10 扩展）。
 - **风险**：低。
 - **Examples（目标交付）**：
   - `examples/scale/scale-playground` — linear/log/pow/time 对照与 ticks/format 交互。
   - `examples/scale/log-plot` — 对数坐标作图与刻度格式化。
 
-### M8 · 数理构件库
+### M8 · 数理构件库 ✅
+
+> **状态**：已完成（2026-06）。构件落地于 `packages/core/src/constructs/*`（依附图形/planes/number-line/matrix/table/brace），轴升级在 `layout/axes.ts`，数字字形在 `text/seven-segment.ts`。
 
 - **目标**：NumberLine/Axes/NumberPlane/PolarPlane/ComplexPlane、FunctionGraph/Parametric/Area/Riemann/Tangent、Matrix/Table/Brace/DecimalNumber（`design.md §7.4`）。
 - **依赖**：M5、M7。
-- **交付物**：构件工厂、`RegisteredAxes.handle`（`c2p/p2c`）、依附构件定位、DecimalNumber 随 tracker 实时更新。
-- **退出标准**：FunctionGraph/Riemann/Tangent 通过 `c2p` 正确贴合；DecimalNumber 随信号刷新；Matrix/Table 布局正确。
-- **风险**：中。
-- **Examples（目标交付）**：
-  - `examples/math/axes-functiongraph` — Axes + FunctionGraph，`c2p` 贴合验证。
-  - `examples/math/riemann-sum` — Riemann 矩形随 `n` 收敛到积分。
-  - `examples/math/tangent-derivative` — 切线随动点移动、斜率实时显示。
-  - `examples/math/matrix-table-brace` — Matrix/Table/Brace/DecimalNumber 组合。
-  - `examples/math/planes` — NumberPlane / PolarPlane / ComplexPlane 一览。
+- **交付物**：构件工厂（`constructs/`）、基于 `Scale` 重写的 `axesObject`（刻度/数字标签）、`AxesHandle` 暴露 `xScale/yScale`、依附构件经 `c2p` 定位、复用 `seven-segment` 字形的 `decimalNumber`/标签、`shapeObject`/`strokeObject` 共享构造器。
+- **退出标准**：FunctionGraph/Riemann/Tangent 通过 `c2p` 正确贴合；DecimalNumber 随信号刷新；Matrix/Table 布局正确。**已满足**（`constructs.test.ts` 14 项全绿：c2p 贴合/反投影、Riemann 收敛、切线斜率、planes 线数、matrix/table/brace bounds）。
+- **与设计稿对齐**：构件签名与 `design.md §7.4` 一致；坐标系/依附构件按 `ax.handle` 模式扩展。**偏差/具体化**：① `brace(target, direction, opts)` 接受 `Bounds2D | IMObject2D` 而非 `RegisteredObject2D`，以保持 `constructs` 不依赖 scene 层；② 数字标签沿用 7-段笔画字形（过渡），真实字体在 M10 升级；③ 构件归于新建 `packages/core/src/constructs/`（而非 `math/constructs/`），避免与 `geometry`/`math` 形成依赖环（depcruise 校验通过）。
+- **风险**：中。**已落地**。
+- **Examples（已交付）**：
+  - `examples/math/axes-functiongraph` — Axes + FunctionGraph/Parametric，`c2p` 贴合验证。
+  - `examples/math/riemann-sum` — Riemann 矩形随 `n`（Leva）收敛到 ∫₀³x²dx=9。
+  - `examples/math/tangent-derivative` — 切线随动点移动、斜率（`decimalNumber`）实时显示。
+  - `examples/math/matrix-table-brace` — Matrix/Table/Brace + 随 tween 刷新的 DecimalNumber。
+  - `examples/math/planes` — NumberPlane / PolarPlane / ComplexPlane 一览（含极坐标玫瑰线）。
 
-### M9 · Morph（含分部匹配）
+### M9 · Morph（含分部匹配）✅
+
+> **状态**：已完成（2026-06）。策略实现于 `animation/morph.ts` + `animation/track.ts`；复合对象 `group2D` 在 `geometry/group.ts`，部件 key 在 `object/types.ts`（`ObjectPart2D`）。
 
 - **目标**：arc-length/anchor/cross-fade + **matching** 分部匹配（`design.md §11.4`）。
 - **依赖**：M2。
-- **交付物**：归一化轮廓、点数对齐、contour 匹配/补齐、`transformMatching`（按 key 的 transformer/remover/introducer）。
-- **退出标准**：不同点数/contour 数 morph 平滑；matching 在公式间正确分部变换；property-based 随机形状不崩。
-- **风险**：高（拓扑差异、分部匹配稳定性）。**缓解**：先交付 arc-length + cross-fade 兜底，matching 作为增量。
-- **Examples（目标交付）**：
-  - `examples/morph/shape-morph` — 圆 ↔ 多边形 ↔ 星形（不同点数）平滑过渡。
-  - `examples/morph/contour-mismatch` — contour 数不同 + cross-fade 兜底。
-  - `examples/morph/matching-shapes` — `transformMatching` 子部件按 key 匹配。
+- **交付物**：四类策略（arc-length 逐点、anchor 最优对齐、matching 分部、cross-fade 溶解）；`group2D` + 部件 key；`transformMatching`/`obj.morphTo`/`obj.transformMatchingTo`；按长度配对 + 零长度轮廓补齐。
+- **退出标准**：不同点数/contour 数 morph 平滑；matching 正确分部变换（transformer/remover/introducer）；property-based 随机形状不崩。**已满足**（`morph-strategies.test.ts` 8 项：配对点数、anchor 降 MSE、轮廓补齐、matching 三类、custom matchBy、property-based 40 组、cross-fade/matching 可 seek）。
+- **与设计稿对齐**：`MorphStrategy`/`MorphOptions.matchBy`/`transformMatching` 与 `design.md §11.4` 一致；`group2D` 对齐 §5.3。**具体化/偏差**：① 单对象渲染无逐部件 alpha，故 remover/introducer 以**几何塌缩/生长**实现 fade 语义，`cross-fade` 在单对象上是**溶解**（顺序淡出→换几何→淡入），真正叠加交叉淡入需两个对象——单对象架构下的等价实现；② `group2D` 置于 `geometry/`（依赖方向 geometry→object 既有），避免 object→geometry 环；③ morph 不在完成时 `replaceObject`（沿用 v0.1 geometryOverride 模型），故链式 morph 的 `from` 仍为原定义，示例以"单次 morph + 时间线拖拽"呈现。
+- **风险**：高（拓扑差异、分部匹配稳定性）。**已落地**，property-based 覆盖随机形状稳定性。
+- **Examples（已交付）**：
+  - `examples/morph/shape-morph` — 圆/多边形/星形（不同点数）arc-length 与 anchor 变换。
+  - `examples/morph/contour-mismatch` — contour 数不同的补齐 + cross-fade 兜底。
+  - `examples/morph/matching-shapes` — `transformMatching` 子部件按 key 的 transformer/remover/introducer。
 
-### M10 · Text / LaTeX 管线
+### M10 · Text / LaTeX 管线 ✅
 
-- **目标**：KaTeX/MathJax→SVG→path→mesh/SDF、writing、与 M9 联动的 `TransformMatchingTex`（`design.md §13`）。
-- **依赖**：M3。
-- **交付物**：LaTeX 排版、glyph path 提取与三角化、troika MSDF 文本、逐笔 writing、token→glyph 分部 key。
-- **退出标准**：公式可 writing；普通文本清晰可缩放；公式间分部变形可用；字体/LaTeX 异步在构建期 prepare 完成（`§14`）。
-- **风险**：高（glyph path 提取、分部映射）。
-- **Examples（目标交付）**：
-  - `examples/text/writing` — 文本与公式逐笔 writing 效果。
-  - `examples/latex/transform-matching-tex` — `a²+b²=c²` 推导的公式分部变形。
-  - `examples/text/font-scale` — MSDF 文本任意缩放保持清晰。
+> **状态**：已完成（2026-06）。SVG 解析 `text/svg-path.ts`；内置笔画字体 `text/stroke-font.ts`；布局/组装 `text/text-layout.ts`；LaTeX 子集 `text/latex.ts`；`transformMatchingTex` `text/transform-tex.ts`；资源/prepare `resource/asset-manager.ts` + `program/context.ts` `ctx.assets`。
 
-### M11 · 交互系统
+- **目标**：LaTeX→SVG→path→几何、writing、与 M9 联动的 `transformMatchingTex`（`design.md §13`）。
+- **依赖**：M3、M9。
+- **交付物**：`parseSvgPath`（M/L/H/V/C/S/Q/T/A/Z）；`textObject`/`latexObject`（带 `TextLayoutTrait` + 按 token 的 `ObjectPart2D` key）；writing（`obj.write()` 描边 reveal）；earcut 实心字形；`transformMatchingTex`（复用 M9 matching）；`AssetManager`（font/latex/svg/data/preload）+ 构建期 `await ctx.assets.*`。
+- **退出标准**：公式可 writing；文本可任意缩放保持锐利（矢量字形）；公式间分部变形可用；资源在构建期 prepare 完成（`§14`）。**已满足**（`text.test.ts` 11 项：SVG 解析含曲线/相对/多子路径、字体字形、textObject 部件与居中、latex 上标抬升与 token key、`transformMatchingTex` 跨公式匹配、AssetManager latex/svg/data + prepare 烘焙可 seek）。
+- **与设计稿对齐**：管线分阶段（解析→布局→trait/部件 key→writing/fill→matching）与 §13 一致；`AssetManager` 接口与 §14 一致；`ctx.assets` 入 `IntermactProgramContext`。**具体化/偏差**：① **双引擎**：默认仍保留内置笔画字体 + LaTeX 子集（headless 确定）；**生产路径已接入**——OpenType 轮廓（`opentype.js` + `fetchBinary`）与 MathJax 3 SVG LaTeX（`engine: "mathjax"`，衬线数学字形）均经 `parseSvgPath`→`composeGlyphs`，trait/key 契约不变。KaTeX / troika MSDF 仍列为后续。② 内置字体覆盖大写+数字+常用符号，小写以 small-caps 呈现；自定义字体由宿主加载。③ 文本走既有 stroke/fill 渲染（矢量天然分辨率无关）；troika MSDF 文本视图列为后续增强。④ `svg`/`data` 接受内联字符串；URL 需宿主 `fetcher`；字体 URL 需 `fetchBinary`。⑤ M8 轴/矩阵/表格/`decimalNumber` 标签已从 7-段升级到内置笔画字体（`labelContours`/`glyphText`）。
+- **风险**：高（glyph path 提取、分部映射）。**已落地并以内置管线消除外部依赖风险**。
+- **Examples（已交付）**：
+  - `examples/text/writing` — 文本逐笔 writing。
+  - `examples/latex/transform-matching-tex` — `a²+b²=c²` → `c²` 的公式分部变形。
+  - `examples/text/font-scale` — 矢量字形多尺寸/缩放保持锐利。
+
+### M11 · 交互系统 ✅
+
+> **状态**：已完成（2026-06）。core 交互层 `interaction/`（`types.ts` 事件/pick 类型、`hit-test.ts` 解析命中、`draggable.ts` 拖拽工厂 + `interactive()`）；R3F 接入 `render-r3f/interaction.ts` + `SceneView.tsx`；键盘在 `react/IntermactCanvas.tsx`。
 
 - **目标**：命中测试、坐标反投影拖拽、`draggablePoint/draggableValue`（`design.md §12`）。
 - **依赖**：M3、M6。
-- **交付物**：pick 代理几何、raycast 阈值、三套坐标事件、拖拽控制点写信号驱动 derived。
-- **退出标准**：细线/空心图形可稳定命中；拖控制点几何实时更新；手势/键盘基础可用。
-- **风险**：中高（WebGL 拾取精度）。
-- **Examples（目标交付）**：
+- **交付物**：`PickProxy`（disc/rect/band）+ `hitTest`/`pickBandFromObject`/`pickRectFromObject`；三套坐标事件（`IntermactPointerEvent`/`IntermactDragEvent`，screen/sceneAbs/sceneRel）；`draggablePoint(Source)`/`draggableValue(Source)` 拖拽写信号驱动 derived；`RegisteredObject2D.on(binding, pick)` 与 `interactive(obj, …)`（供 derived 构建）；R3F 正交反投影（`unprojectOrtho`/`projectOrtho`）+ 指针事件 + 命中分发 + cursor；`IntermactCanvas` 键盘传输（空格/方向键/Home/End）。
+- **退出标准**：细线/空心图形可稳定命中；拖控制点几何实时更新；手势/键盘基础可用。**已满足**（`interaction.test.ts` core 6 项 + render-r3f 3 项：disc/rect/polyline 命中、band 代理、draggablePoint/Value 读写与几何居中、反投影往返、命中收集）。
+- **与设计稿对齐**：`InteractiveTrait`/事件/`draggable*` 与 `design.md §12.1–§12.3` 一致；坐标三件套与 §12.2 一致。**具体化/偏差**：① 命中用**场景空间解析求交**（pick 代理 disc/rect/band + 指针 `unproject`）替代"不可见 pick mesh + WebGL raycast 阈值"——2D 正交下结果等价且更确定/稳定（纯函数可无头测试）；② 拖拽手柄几何以信号当前值为中心，须用 `registerReactive`/`*Source` 注册以随信号移动（与 M6 链路一致），`on()` 经 `DefinitionHost`（scene）回写定义。
+- **风险**：中高（WebGL 拾取精度）。**已落地并以解析命中消除 raycast 精度风险**。
+- **Examples（已交付）**：
   - `examples/interaction/draggable-bezier` — 拖控制点实时重算的贝塞尔曲线（`design.md §12.3`）。
-  - `examples/interaction/hit-testing` — 细线/空心图形命中高亮与 pick 代理可视化。
-  - `examples/interaction/explorable-derivative` — 拖动 `x` 探索切线/导数的可交互演示。
+  - `examples/interaction/hit-testing` — 细线/圆环精确命中与高亮（band pick 代理）。
+  - `examples/interaction/explorable-derivative` — 拖动 `x` 探索切线/导数读数的可交互演示。
 
-### M12 · 布局 + Inspector
+### M12 · 布局 + Inspector ✅
+
+> **状态**：已完成（2026-06）。world-transform 代数 `runtime/world-transform.ts`；`LayoutHandle` 在 `scene/layout.ts`（挂到 `RegisteredObject2D.layout`）；层级 `scene.setParent` + Player 快照合成；Inspector 在 `react/Inspector.tsx`；`ReactiveEngine.inspect()` 暴露依赖图。
 
 - **目标**：anchor/nextTo/alignTo/fitTo/arrange 与时间线检视器（`design.md §9.4、§16`）。
 - **依赖**：M8、M11。
-- **交付物**：布局算子（返回动画句柄）、Inspector（registry、对象运行时态、活跃 Track、信号依赖图、bounds/pick 高亮）。
-- **退出标准**：相对/网格布局正确；Inspector 能定位对象与诊断坐标/依赖。
-- **风险**：中。
-- **Examples（目标交付）**：
-  - `examples/layout/next-to-arrange` — 标题+公式用 `nextTo/alignTo/arrange` 自动排版。
-  - `examples/layout/responsive-rect` — RectTransform/UV 随容器自适应。
-  - `examples/devtools/inspector-tour` — Inspector 检视时间线、运行时态与信号依赖图。
+- **交付物**：`LayoutHandle`（`getBounds`/`alignTo`/`nextTo`/`fitTo`/`arrange`，返回 Animation 句柄）；transform 层级（`setParent` + Player 快照沿父链 TRS 合成 world transform + 透明度相乘）；纯函数 `composeTransform2D`/`transformBounds`/`resolveTransform2D`/`worldDeltaToLocal`；Inspector（registry + 运行时态表、活跃 Track、`reactive.inspect()` 信号/derived/updater 图、SVG bounds 高亮 + 行点选）；`IntermactCanvas controls.inspector`。
+- **退出标准**：相对/网格布局正确；世界变换层级合成正确；bounds 断言。**已满足**（`layout.test.ts` 11 项：compose/transformBounds/identity、getBounds、alignTo（中心/角锚）、nextTo+gap、fitTo 等比、arrange row、父级旋转的子世界变换合成、透明度沿父链相乘）。
+- **与设计稿对齐**：`LayoutHandle`/`Bounds2D`/层级与 `design.md §9.3、§9.4` 一致；Inspector 项与 §16 一致。**具体化/偏差**：① LayoutHandle 在世界空间计算并**即时回写授权 transform**（便于同一构建内链式布局），同时返回可 `play`/`commit` 的 Animation；② world transform 合成放在 **Player 快照阶段**（渲染层只消费 `RenderSnapshot`），`anchor` 用于 `alignTo` 语义、渲染轴心仍为对象局部原点；③ Inspector bounds 投影默认按 `contain` fit 复算（可经 `fit` prop 覆盖），pick 代理高亮与 bounds 共用同一叠层；④ depcruise 通过（119 模块 0 违规）。
+- **风险**：中。**已落地**。
+- **Examples（已交付）**：
+  - `examples/layout/next-to-arrange` — `alignTo/nextTo/arrange` 组合自动排版。
+  - `examples/layout/responsive-rect` — 域相对 UV 锚点 + `fitTo` 等比贴合。
+  - `examples/devtools/inspector-tour` — Inspector 检视 registry/运行时态/活跃 Track/信号依赖图/bounds。
 
-### ◆ v0.2 验收（DoD）
+### ◆ v0.2 验收（DoD） ✅
 
-- 示例：可交互的微积分演示（Riemann 和随 tracker 收敛、切线随拖动）、公式分部变形、矩阵/表格。
-- LaTeX writing 与 `transformMatching` 可用；Inspector 进入 dev 工具链。
-- 数理构件、Scale、Morph、交互均有单测与视觉回归覆盖。
+> **状态**：已完成（2026-06）。M7–M12 全部 ✅，`pnpm run ci` 全绿，各包 `VERSION` 升至 `0.2.0`。详见 `docs/project/v02-checklist.md` 与 `design.md §0.2`。
+
+- [x] 示例：可交互的微积分演示（Riemann 和随 tracker 收敛 `math/riemann-sum`、切线随动点 `math/tangent-derivative`、拖动探索 `interaction/explorable-derivative`）、公式分部变形（`latex/transform-matching-tex`）、矩阵/表格（`math/matrix-table-brace`）。
+- [x] LaTeX writing（`text/writing`）与 `transformMatching`（`morph/matching-shapes`）可用；Inspector 进入 dev 工具链（`controls.inspector` + `devtools/inspector-tour`）。
+- [x] 数理构件、Scale、Morph、交互、布局均有确定性单测覆盖（`scale`/`constructs`/`morph-strategies`/`text`/`interaction`/`layout`），纳入 CI。
+- [x] CI 全绿：lint + typecheck + vitest + depcruise（119 模块 0 违规）+ build。
 
 ## 6. 阶段三 · PCG 演示系统（v1.0）
 
@@ -379,6 +455,12 @@ gantt
 - **目标**：Storyboard 序列化、分享 URL、视频/快照导出、可嵌入 HTML、语义层、响应式（`design.md §17`）。
 - **依赖**：M1、M12。
 - **交付物**：`serialize/deserialize`、分享 URL 编码、固定 fps 逐帧导出（视频/GIF）、PNG/SVG 快照、web component/iframe 嵌入、超链接/讲义语义层、`prefers-reduced-motion`。
+- **Phase-1 序列化债（须在 M15 清偿或显式降级）**：
+  - `Easing = EasingName | EasingFn` 内联函数不可序列化
+  - `morph` spec 内嵌完整 `IMObject2D`
+  - `call` / `external` 逃生舱副作用
+  - `ctx.assets` / 资源句柄（设计稿 §19.0，实现未建）
+  - 构建期闭包捕获的 reactive 源（需规范为可引用 id）
 - **退出标准**：演示可序列化并从 URL 还原；离线导出逐帧确定一致；可嵌入第三方页面；reduced-motion 降级生效。
 - **风险**：中（逃生舱 `call/external` 不可序列化的处理）。
 - **Examples（目标交付）**：
@@ -431,7 +513,7 @@ flowchart LR
     DX -.贯穿.- P
 ```
 
-- **文档**：每个里程碑落地后同步更新 `design.md` 与"修订记录"，示例代码作为可编译/可运行的活文档（`design.md §19`）。
+- **文档**：每个里程碑落地后同步更新 `design.md` §0.1 实现进度日志；**使用者向**文档写入 VitePress 站点（`docs/`，`pnpm run dev:docs`）；**API Reference** 由 `pnpm run gen:reference`（TypeDoc + `typedoc-vitepress-theme`）从源码 TSDoc 生成，禁止在文档站手写重复 API 页；示例代码作为可编译/可运行的活文档（`design.md §19`）。
 - **测试**：每里程碑必带对应测试类型（见 `design.md §21`）；时间线快照与性能基准纳入 CI 防回归。
 - **示例**：每个里程碑都声明了一组**目标交付 examples**（见 §4–§6 各里程碑的 "Examples" 条目），随里程碑落地沉淀进 `examples/` 形成累积演示库，并复用于视觉回归与各阶段闸口 DoD。`_template/`、`_smoke/` 前缀为脚手架/冒烟用例，其余按能力域分目录（`geometry/`、`anim/`、`math/`、`pcg/`、`3d/`、`interaction/`、`export/`、`plugin/` 等）。
 - **开发者体验**：错误码/校验/strict 模式/Inspector 随能力增长持续完善（`design.md §16`）。

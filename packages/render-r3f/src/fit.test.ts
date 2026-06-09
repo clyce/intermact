@@ -12,6 +12,15 @@ describe("camera fit (§9/§10)", () => {
     expect(frustum.right - frustum.left).toBeCloseTo(8 * (4 / 2));
   });
 
+  it("cover crops to fill a wide canvas", () => {
+    const { frustum } = computeFit(domain, "cover", 800, 200);
+    expect(frustum.left).toBeCloseTo(-4);
+    expect(frustum.right).toBeCloseTo(4);
+    // Vertical domain is cropped to match the wide aspect.
+    expect(frustum.top).toBeCloseTo(1);
+    expect(frustum.bottom).toBeCloseTo(-1);
+  });
+
   it("stretch matches the domain exactly", () => {
     const { frustum } = computeFit(domain, "stretch", 800, 200);
     expect(frustum.left).toBeCloseTo(-4);

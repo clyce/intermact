@@ -1,7 +1,5 @@
-import { createProgram, xy } from "@intermact/core";
-import { useTimelinePlayer } from "../lib/useTimelinePlayer";
-import { SvgScene } from "../lib/SvgScene";
-import { TimelineControls } from "../lib/TimelineControls";
+import { circle, createProgram, xy } from "@intermact/core";
+import { IntermactCanvas } from "@intermact/react";
 
 /**
  * `examples/timeline/markers-slides` (dev-roadmap.md M1).
@@ -17,7 +15,9 @@ const program = createProgram(async (ctx) => {
   });
   ctx.mount(scene, ctx.createCamera2D(scene));
 
-  const dot = scene.registerEmpty({ position: xy(0, -1) });
+  const dot = scene.register(circle({ radius: 0.2, style: { fill: "#f472b6" } }), {
+    position: xy(0, -1),
+  });
   scene.marker("Intro");
   await scene.play(dot.moveTo(xy(0, 1), { duration: 1 }));
   scene.marker("Rise");
@@ -28,37 +28,44 @@ const program = createProgram(async (ctx) => {
 });
 
 export function MarkersSlidesDemo() {
-  const { player, scene, snapshot } = useTimelinePlayer(program);
-  const markers = player?.storyboard.markers ?? [];
   return (
     <div style={{ padding: 24 }}>
       <h2 style={{ marginTop: 0 }}>Markers &amp; slides</h2>
       <p style={{ color: "#94a3b8", maxWidth: 640 }}>
-        Each marker is a chapter bookmark. Click one to <code>jumpToMarker</code> — slide-style
+        Each marker is a chapter bookmark. Click one to <code>jumpToMarker</code> �?slide-style
         presentation navigation built on the same seekable timeline.
       </p>
-      <SvgScene scene={scene} snapshot={snapshot} />
-      <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-        {markers.map((m) => (
-          <button
-            key={m.name}
-            onClick={() => player?.jumpToMarker(m.name)}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 6,
-              border: "1px solid #334155",
-              background: "#1e293b",
-              color: "#e2e8f0",
-              cursor: "pointer",
-              font: "inherit",
-              fontSize: 13,
-            }}
-          >
-            {m.name} · {m.time.toFixed(1)}s
-          </button>
-        ))}
+      <div style={{ height: "100%" }}>
+        <IntermactCanvas
+          program={program}
+          controls={{ timeline: true }}
+          chrome={(built) => {
+            const markers = built.player.storyboard.markers;
+            return (
+              <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                {markers.map((m) => (
+                  <button
+                    key={m.name}
+                    onClick={() => built.player.jumpToMarker(m.name)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: 6,
+                      border: "1px solid #334155",
+                      background: "#1e293b",
+                      color: "#e2e8f0",
+                      cursor: "pointer",
+                      font: "inherit",
+                      fontSize: 13,
+                    }}
+                  >
+                    {m.name} · {m.time.toFixed(1)}s
+                  </button>
+                ))}
+              </div>
+            );
+          }}
+        />
       </div>
-      <TimelineControls player={player} time={snapshot?.time ?? 0} />
     </div>
   );
 }

@@ -30,7 +30,7 @@ const program = createProgram(async (ctx) => {
 
 export function EasingGalleryDemo() {
   return (
-    <div style={{ height: 360 }}>
+    <div style={{ height: "100%" }}>
       <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );

@@ -108,9 +108,34 @@ describe("2D primitives (§5.3)", () => {
     expect(shaft[0]).toEqual([0, 0]);
     expect(shaft.at(-1)![0]).toBeCloseTo(2.5);
     expect(shaft.at(-1)![1]).toBeCloseTo(0);
-    const tip = pointsToTuples(path.contours[1]!.points)[0]!;
-    expect(tip[0]).toBeCloseTo(3);
-    expect(tip[1]).toBeCloseTo(0);
+    const head = pointsToTuples(path.contours[1]!.points);
+    expect(head[0]).toEqual([3, 0]);
     expect(hasTrait(a.traits, "fill")).toBe(true);
+    const fill = findTrait(a.traits, "fill");
+    expect(fill!.contours()).toHaveLength(1);
+    expect(fill!.contours()[0]!.closed).toBe(true);
+  });
+
+  it("arrow: head base is perpendicular to shaft (diagonal)", () => {
+    const from = xy(-1.2, 0);
+    const to = xy(1.2, 0.3);
+    const a = arrow({ from, to, headLength: 0.4, headWidth: 0.35 });
+    const [shaft, head] = a.geometry.samplePath().contours;
+    const shaftEnd = pointsToTuples(shaft!.points).at(-1)!;
+    const [tip, wingA, wingB] = pointsToTuples(head!.points);
+    const dirX = to[0] - from[0];
+    const dirY = to[1] - from[1];
+    const dirLen = Math.hypot(dirX, dirY);
+    const ux = dirX / dirLen;
+    const uy = dirY / dirLen;
+    const baseX = wingB![0] - wingA![0];
+    const baseY = wingB![1] - wingA![1];
+    expect(ux * baseX + uy * baseY).toBeCloseTo(0, 5);
+    expect(shaftEnd[0]).toBeCloseTo((wingA![0] + wingB![0]) / 2, 5);
+    expect(shaftEnd[1]).toBeCloseTo((wingA![1] + wingB![1]) / 2, 5);
+    const tipVecX = tip![0] - shaftEnd[0];
+    const tipVecY = tip![1] - shaftEnd[1];
+    expect(ux * tipVecX + uy * tipVecY).toBeGreaterThan(0);
+    expect(Math.abs(tipVecX * baseY - tipVecY * baseX)).toBeGreaterThan(0);
   });
 });

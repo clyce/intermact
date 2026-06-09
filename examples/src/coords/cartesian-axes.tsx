@@ -18,8 +18,6 @@ const program = createProgram(async (ctx) => {
     xLabel: "x",
     yLabel: "y",
   });
-  axes.applyInitial?.({ opacity: 0 });
-
   const dot = scene.register(
     circle({ radius: 0.4, style: { fill: "#38bdf8", stroke: "#7dd3fc", lineWidth: 0.03 } }),
     { position: xy(1.5, 1) },
@@ -35,7 +33,7 @@ const program = createProgram(async (ctx) => {
 
 export function CartesianAxesDemo() {
   return (
-    <div style={{ height: 440 }}>
+    <div style={{ height: "100%" }}>
       <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );

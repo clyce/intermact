@@ -1,12 +1,18 @@
+import { useEffect, useState } from "react";
 import { type Player } from "@intermact/core";
 
 /**
  * HTML transport controls overlay bound to a {@link Player}: scrub slider,
  * play/pause/reset, rate (incl. reverse), and loop. Rendered as a DOM layer
- * over the WebGL canvas (design.md §10/§15); time is passed in so the slider
- * reflects playback.
+ * over the WebGL canvas (design.md §10/§15).
  */
-export function TimelineControls({ player, time }: { player: Player; time: number }) {
+export function TimelineControls({ player }: { player: Player }) {
+  const [time, setTime] = useState(player.time);
+
+  useEffect(() => {
+    return player.subscribe((snapshot) => setTime(snapshot.time));
+  }, [player]);
+
   const rates = [-1, 0.5, 1, 2];
   const btn = (active: boolean): React.CSSProperties => ({
     padding: "4px 10px",

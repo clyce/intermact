@@ -34,7 +34,7 @@ const program = createProgram(async (ctx) => {
 
 export function SequenceParallelStaggerDemo() {
   return (
-    <div style={{ height: 420 }}>
+    <div style={{ height: "100%" }}>
       <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );

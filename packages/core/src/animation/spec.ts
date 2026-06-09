@@ -1,5 +1,5 @@
 import { type Easing } from "./easing";
-import { type IMObject2D } from "../object/types";
+import { type IMObject2D, type ObjectPart2D } from "../object/types";
 
 /**
  * Animation as data + interpreter (design.md §11.1). Animations are pure
@@ -26,9 +26,16 @@ export type PropertyPath =
   | { readonly type: "reveal" }
   | { readonly type: "fill" };
 
-/** Stroke reveal description for `Create` (detailed in M4). */
+/** Stroke reveal description for `Create` / `write()`. */
 export interface StrokeRevealSpec {
   readonly mode?: "path-order" | "contour-parallel";
+  /** Glyph writing order: left-to-right, right-to-left, or all at once. */
+  readonly direction?: "ltr" | "rtl" | "simultaneous";
+  /**
+   * Fraction of each glyph stroke that may overlap with the next (0 = strict
+   * left-to-right; 0.3 = next glyph starts when the previous is 70% done).
+   */
+  readonly glyphOverlap?: number;
 }
 
 /** Fill reveal description for `Create` (detailed in M4). */
@@ -40,12 +47,17 @@ export interface FillRevealSpec {
 /** Morph strategy (design.md §11.4). */
 export type MorphStrategy = "arc-length" | "anchor" | "matching" | "cross-fade";
 
+/** Per-part key function for the `matching` strategy (design.md §11.4). */
+export type MatchByFn = (part: ObjectPart2D) => string;
+
 /** Options for {@link morph}. */
 export interface MorphOptions {
   readonly duration?: number;
   readonly easing?: Easing;
   readonly sampleCount?: number;
   readonly strategy?: MorphStrategy;
+  /** `matching` strategy: derive a part key (default: `part.key`). */
+  readonly matchBy?: MatchByFn;
   readonly preserveStyle?: boolean;
 }
 
@@ -83,6 +95,8 @@ export type AnimationSpec =
       readonly duration: number;
       readonly easing?: Easing;
       readonly sampleCount?: number;
+      /** `matching` strategy: per-part key function (default `part.key`). */
+      readonly matchBy?: MatchByFn;
       readonly preserveStyle?: boolean;
     }
   | {
@@ -97,6 +111,8 @@ export type AnimationSpec =
   | {
       readonly kind: "fade";
       readonly targetId: string;
+      /** When set, applied to baseline at compile time (e.g. fade-in from 0). */
+      readonly from?: number;
       readonly to: number;
       readonly duration: number;
       readonly easing?: Easing;

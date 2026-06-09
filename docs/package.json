@@ -1,0 +1,21 @@
+{
+  "name": "@intermact/docs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Intermact documentation site (VitePress + TypeDoc API reference).",
+  "type": "module",
+  "scripts": {
+    "gen:reference": "typedoc --options typedoc.json --tsconfig tsconfig.typedoc.json && node scripts/merge-reference-index.mjs",
+    "predev": "pnpm run gen:reference",
+    "dev": "vitepress dev",
+    "prebuild": "pnpm run gen:reference",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "typedoc": "^0.28.19",
+    "typedoc-plugin-markdown": "^4.12.0",
+    "typedoc-vitepress-theme": "^1.1.3",
+    "vitepress": "^1.6.3"
+  }
+}

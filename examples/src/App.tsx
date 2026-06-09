@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { DemoShell } from "./lib/DemoShell";
 import { demos } from "./registry";
 
 function useHashRoute(): [string, (id: string) => void] {
@@ -86,7 +87,9 @@ export function App() {
         ))}
       </aside>
       <main style={{ flex: 1, position: "relative", minWidth: 0 }}>
-        <Active />
+        <DemoShell caption={active.caption} captionPlacement={active.captionPlacement}>
+          <Active />
+        </DemoShell>
       </main>
     </div>
   );

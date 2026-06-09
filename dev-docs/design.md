@@ -36,13 +36,13 @@ Intermact 是一个基于 React Three Fiber 的交互式数理可视化平台。
   - **里程碑边界微调**：`moveTo/rotateTo/scaleTo/fadeTo`（纯 tween 包装）在 M1 先行落地以支撑时间线示例；`Create`（描边/填充 reveal、play 前不显示）、`stagger/call` 语义细化、easing 画廊与 `fadeIn/fadeOut` 仍按计划在 M4 完善。
   - `call` 为不可 seek 边界（§11.5）：拖拽 seek 不触发，仅正向 `update` 播放触发；已有测试覆盖。
   - 种子化 RNG（§6.7）最小实现 `createRng`（mulberry32 + `fork`），完整 PCG 在 M13。
-  - M1 示例：`timeline/seek-basics`、`timeline/markers-slides`、`timeline/headless-eval`（示例暂用内联 SVG 可视化 + 时间线控件，真正的 R3F 渲染在 M3 接入）。确定性时间线快照测试已纳入 `pnpm run test`/`ci`。
+  - M1 示例：`timeline/seek-basics`、`timeline/markers-slides`（`IntermactCanvas`）、`timeline/headless-eval`（无头 Node 求值）。确定性数值断言测试已纳入 `pnpm run test`/`ci`。
 - **M2 · 2D 几何与采样**（已完成）：
   - 按 §5 落地 8 类图元工厂：`circle/ellipse/rectangle(含圆角)/arc/polygon(含洞)/bezierCurve(二次/三次链)/line/arrow`，均产出不可变 `IMObject2D` + 组合 trait（`stroke`，闭合形加 `fill`/`morphable`）。
   - 几何内核：`resampleByArcLength`（弧长均匀重采样）、`cumulativeLengths`（前缀和，含闭合段）、`SampledPath2D`/`SampledContour2D`（`Float32Array` 缓冲通道）、`pointsToTuples`（作者层元组通道）、`earcut` 三角化（`triangulate`，首轮廓为外环、其余为洞）、`computeBounds`（AABB）。
   - `GeometryProvider2D` 由 `createGeometryProvider2D` 统一构建：`samplePath(opts)` 支持按 `samples` 弧长重采样、`getBounds`、`sampleBuffer` 缓冲通道；trait 经 `strokeTraitFrom/fillTraitFrom/morphableTraitFrom` 组合。
   - 单测覆盖：采样点数、弧长（圆周长≈2πr）、bounds、带洞三角化面积（外−洞）、缓冲/元组通道一致性。
-  - M2 示例：`geometry/primitives-gallery`、`geometry/sampling-debug`（暂用内联 SVG 几何渲染叠加采样点/bounds/三角网，真正的 R3F 渲染在 M3）。
+  - M2 示例：`geometry/primitives-gallery`、`geometry/sampling-debug`（`IntermactCanvas` + `geometryPreviewProgram` 辅助；采样/bounds/三角网叠加亦走 R3F）。
 - **M3 · R3F 渲染适配**（已完成）：
   - `render-three`（无 React）：`buildStrokeGeometry`（世界单位 ribbon + 按弧长 trim 实现描边 reveal）、`buildFillGeometry`（earcut→索引几何）、`makeBasicMaterial`（unlit + transparent + `depthWrite=false`，2D 画家算法）、`parseColor`（解析 rgba/hsla alpha）、`ThreeObjectView`/`ThreeSceneView`（按 id 增量 diff 快照 → three 场景图，仅变化项重建几何）、`SceneRendererAdapter` 接口（§15.1，R3F 路径由 SceneView 履行）。
   - `render-r3f`：`computeFit`（contain/cover/stretch 正交相机适配 + worldPerPixel）、`SceneView`（R3F 内组件：托管 `ThreeSceneView`，`useFrame` 驱动 Player 并 diff 更新，resize/DPI 由 R3F 处理，相机随域重拟合）。
@@ -50,7 +50,7 @@ Intermact 是一个基于 React Three Fiber 的交互式数理可视化平台。
   - **px 线宽**：以视口 `worldPerPixel` 换算为世界单位 ribbon 近似恒定屏幕宽度；独立的屏幕空间描边 shader 推迟（后续里程碑）。
   - **健壮性**：`SceneView` 对 `useFrame` 的 delta 做 `min(delta,0.05)` 截断，避免标签页后台恢复时的大 delta 跳帧。
   - **构建**：库包 tsconfig 覆盖 `paths:{}`，使 tsup 的 dts 生成经 node 解析到各依赖包的 `dist/*.d.ts`（按 pnpm 拓扑序），根 tsconfig 仍用 `paths` 指向源码做开发期类型检查。
-  - 浏览器验证：stroke/fill/even-odd、描边 trim reveal（t=0 未绘制、随 seek 平滑画出）、z 序 + 半透明合成、非方形容器下圆形不失真（相机 contain 适配）、px 细线清晰；smoke 测试（geometry builders + `ThreeSceneView` 增删改）通过。
+  - 浏览器验证：stroke/fill、**nonzero + 带洞（ring/holes）** 三角化、描边 trim reveal（t=0 未绘制、随 seek 平滑画出）、z 序 + 半透明合成、非方形容器下圆形不失真（相机 contain 适配）、px 细线清晰；smoke 测试（geometry builders + `ThreeSceneView` 增删改）通过。**自相交 even-odd 填充**（如五角星/笔画交叉）推迟至 M9/M16。
   - M3 示例：`render/stroke-fill-showcase`、`render/zorder-transparency`、`render/dpi-resize`（均用真实 `IntermactCanvas`）。
 - **M4 · 基础动画（数据 + 解释器）**（已完成）：
   - `compileSpec` 现支持 `create`（描边 reveal + 填充 after-stroke-fade）、`fade`、`tween-signal`；`RegisteredObject2D` 提供 `create/fadeIn/fadeOut/moveTo/rotateTo/scaleTo/fadeTo/tween`。
@@ -64,17 +64,80 @@ Intermact 是一个基于 React Three Fiber 的交互式数理可视化平台。
   - 最小数理构件（支撑 L1 §19.2，完整 Scale/刻度属 M7）：`axesObject`、`functionGraph`、`decimalNumber`（7-segment 笔画，`registerReactive` 驱动）。
   - 新增 `polyline` 图元工厂；M5 示例：`coords/cartesian-axes`、`coords/fit-strategies`、`coords/polar-scene`。
 - **渲染/几何修订（v0.1.1）**：
-  - **Arrow**：主轴止于箭头底边中心；箭头为底边垂直于主轴且被主轴平分的实心等腰三角形（`fill` + `stroke`）。
+  - **Arrow**：主轴止于箭头底边中心；箭头为底边垂直于主轴且被主轴平分的实心等腰三角形（`fill` + `stroke`）。**修订（v0.1.2）**：`fill` trait 仅采样**闭合**轮廓（箭头仅三角头部参与 earcut；开放 shaft 仅描边）；`SvgGeometry` 同步改用 `fill.contours()`，避免把 shaft 与 head 拼成错误填充。
   - **Stroke trim**：闭合轮廓的弧长计量包含「末点→首点」闭合段；`revealEnd→1` 时不再瞬间跳满（修复开放/闭合图元节点数与线段数差异带来的进度偏差）。
 - **M6 · 响应式最小集**（已完成）：
   - `signal/computed/valueTracker`、`derived`、`ReactiveEngine`（依赖版本 + 最小重算）、`addUpdater`、`tweenSignal`（seekable `SignalTrack`）、`bindSignal`。
-  - 构建期 `setSignalRegistrar` 自动注册 program 内创建的信号；每帧 `Player.prepareFrame` → `ReactiveEngine.flush` 在快照前重算 derived/运行 updater。
+  - 构建期通过 `ctx.signal` / `ctx.valueTracker` 创建并注册信号（无进程级全局 registrar）；每帧 `Player.prepareFrame` → `ReactiveEngine.flush` 在快照前重算 derived/运行 updater。
   - `@intermact/react`：`useSignal` hook。
   - M6 示例：`reactive/value-tracker`（§8.2 双曲线内接矩形）、`reactive/leva-binding`（§19.2 精简）。
 - **◆ L1 · v0.1 验收**（已完成）：
-  - `pnpm run ci` 全绿（lint + typecheck + 62 项 vitest + depcruise + build）；时间线确定性快照测试保留在 CI。
+  - `pnpm run ci` 全绿（lint + typecheck + 67 项 vitest + depcruise + build）；时间线**确定性数值断言**测试保留在 CI。
   - 可运行示例：`l1/basic-2d`（§19.1：Create/轴/arc-length morph/seek）、`l1/interactive-sine`（§19.2：Leva→Signal→derived 曲线实时重算）。
   - **与 §19.2 的微小偏差**：`decimalNumber` 在示例中用 `xy` 世界坐标定位（非 `uv` HUD 贴边）；完整视口级 UV 布局在 Canvas/HUD 里程碑细化。
+- **文档站（VitePress + TypeDoc）**（2026-06-06，API Reference 2026-06-07）：
+  - 选型 **VitePress**（指南/示例索引）+ **TypeDoc**（`typedoc-plugin-markdown` + `typedoc-vitepress-theme`，从 `packages/*/src` 导出符号与 TSDoc 生成 `docs/reference/`）。站点位于 `docs/`，workspace 包 `@intermact/docs`。
+  - 命令：`pnpm run gen:reference`（仅生成 API）、`pnpm run dev:docs`（先 gen 再 VitePress 开发）、`pnpm run build:docs`（静态构建至 `docs/.vitepress/dist`）。
+  - Phase-1 覆盖：指南（概念与用法）、**API Reference**（符号页由 TypeDoc 自动生成；总览架构说明见 `docs/reference-index.src.md`，经 `merge-reference-index.mjs` 并入 `/reference/`）、monorepo 包分层说明、示例索引、`v01-checklist`；架构契约仍以本文件与 `dev-roadmap.md` 为准。
+
+### 0.2 实现进度日志（Phase-2 / v0.2）
+
+记录 Phase-2（数理工具箱）各里程碑落地时与本设计的对齐情况及具体化选择。仅记录偏差/具体化，架构契约以上文各章为准。
+
+- **M7 · Scale 与刻度**（已完成）：
+  - 按 §7.3 落地 `Scale<TDomain,TRange>`（可调用 + `invert`/`ticks`/`tickFormat`/`domain`/`range`）及四类实现 `linearScale`/`powScale`/`logScale`/`timeScale`，位于 `packages/core/src/math/scale.ts`。
+  - 刻度用 D3「nice number」算法（步长恒为 `1/2/5×10^k`）；导出 `numericTicks`/`tickStep`/`timeTicks` 供 M8 轴刻度复用。`logScale` 域须严格为正、刻度落在 `base` 幂上（小跨度补 1–9 细分）；`timeScale` 刻度按 UTC 日历对齐（秒~年间隔表）。
+  - **偏差**：`tickFormat` 的 `spec` 仅支持最小子集（`"%"` 百分比、`".<n>f"` 定点），完整 D3 format mini-language 未实现，按需后续扩展。
+  - M7 示例：`scale/scale-playground`（四类标度刻度分布对照 + `tickFormat`）、`scale/log-plot`（`2^x` 对数轴呈直线）。`scale.test.ts` 12 项确定性数值断言纳入 `pnpm run test`。
+
+- **M8 · 数理构件库**（已完成）：
+  - 按 §7.4 落地坐标系构件（`numberLine`/`numberPlane`/`polarPlane`/`complexPlane`）、依附构件（`functionGraph` 在 `layout/`，`parametricGraph`/`areaUnderCurve`/`riemannRectangles`/`tangentLine` 在 `constructs/graphs.ts`）、表达标注（`matrixObject`/`tableObject`/`brace`），并复用 M6 的 `decimalNumber`。
+  - `axesObject` 基于 §7.3 `Scale` 重写：刻度位置/数字标签由 `linearScale`/`logScale`/`powScale` 生成；`AxesHandle` 新增 `xScale`/`yScale`，依附构件与轴共享标度。导出 `riemannSum`/`slopeAt` 数值工具供读数与测试。
+  - **具体化/偏差**：① 构件置于**新建** `packages/core/src/constructs/`（非 §3.3 目录树中的 `math/constructs/`），以避免 `constructs→math/geometry` 与既有反向依赖形成环——depcruise 校验通过（98 模块 0 违规）；② `brace(target, direction, opts)` 形参改为 `Bounds2D | IMObject2D`（读取几何 bounds），不再依赖 `RegisteredObject2D`，保持 core/constructs 与 scene 层解耦；③ 数字标签/矩阵/表格条目沿用 §13 之前的 7-段笔画字形（抽到 `text/seven-segment.ts` 复用），真实字体/LaTeX 在 M10 升级——里程碑边界，非降级；④ Matrix/Table 内部计算列宽/行高并产出单个 `IMObject2D`（与 `axesObject` 同模式）。
+  - M8 示例：`math/axes-functiongraph`、`math/riemann-sum`、`math/tangent-derivative`、`math/matrix-table-brace`、`math/planes`。`constructs.test.ts` 14 项（c2p 贴合/反投影、Riemann 收敛、切线斜率、planes 线数、matrix/table/brace bounds）纳入 `pnpm run test`。
+
+- **M9 · Morph（含分部匹配）**（已完成）：
+  - 按 §11.4 在 `animation/morph.ts` + `animation/track.ts` 落地四类策略：`arc-length`（逐点）、`anchor`（闭合轮廓最优循环旋转 / 开放轮廓择方向，降低扭转）、`matching`（分部 transformer/remover/introducer）、`cross-fade`（溶解）。轮廓数不同按长度降序配对 + 零长度（质心塌缩）轮廓补齐。
+  - 按 §5.3 在 `geometry/group.ts` 落地 `group2D`（聚合子对象几何为单个可渲染对象，同时保留 `parts` 部件 key）；`ObjectPart2D` 加到 `object/types.ts`。新增 `transformMatching` 及 `RegisteredObject2D.morphTo`/`transformMatchingTo`，`MorphOptions.matchBy` 入 spec。
+  - **具体化/偏差**：① 渲染层无逐部件透明度通道，故 matching 的 remover/introducer 用**几何塌缩/生长**实现 fade，`cross-fade` 在单个注册对象上是**溶解**（顺序淡出→换几何→淡入）——真正的叠加交叉淡入需两个对象各自 fade；均为单对象架构下的等价实现，非降级。② `group2D` 放在 `geometry/`（既有 geometry→object 方向）以避免 object→geometry 依赖环；depcruise 通过（100 模块 0 违规）。③ 沿用 v0.1 的 geometryOverride 模型，morph 完成时不 `replaceObject`，链式 morph 的 `from` 仍取原定义，示例以单次 morph + 时间线拖拽呈现（§22.1 的"Morph 替换定义"留待序列化/播放器增强）。
+  - M9 示例：`morph/shape-morph`、`morph/contour-mismatch`、`morph/matching-shapes`。`morph-strategies.test.ts` 8 项（含 property-based 40 组随机形状）纳入 `pnpm run test`。
+
+- **M10 · Text / LaTeX 管线**（已完成）：
+  - 按 §13 落地完整管线：`text/svg-path.ts` 的 `parseSvgPath`（M/L/H/V/C/S/Q/T/A/Z，曲线经共享采样器展平为 contour）是字体/`AssetManager.svg`/未来 MathJax 提供器共享的入口；`text/text-layout.ts` 提供 `placeString`/`composeGlyphs`/`textObject`，每个字形为一个 `ObjectPart2D`（key 默认 `char@index`），整体带 `TextLayoutTrait`（`tokens()`）；`text/latex.ts` 的 `latexObject` 实现 LaTeX 子集（原子/运算符/`^`/`_`/`{}`/`\times`/`\cdot`），token 以值为 key；`text/transform-tex.ts` 的 `transformMatchingTex` 复用 M9 matching；writing 经 `RegisteredObject2D.write()`（描边 reveal，复用 Create）。
+  - 按 §14 落地资源/prepare：`resource/asset-manager.ts` 的 `AssetManager`（`font/latex/svg/data/preload`）在 `program/build.ts` 经 `ctx.assets` 暴露，program 构建期 `await` 后再产出 Player，保证播放期无未决异步、可 seek。新增 `TextLayoutTrait`/`TextToken` 到 `object/traits.ts`。
+  - **具体化/偏差**：① 引擎采用**内置笔画矢量字体（字形以 SVG `d` 编写，经 `parseSvgPath` 解析）+ LaTeX 子集排版**，而非 §13 所列 KaTeX/MathJax→SVG + troika MSDF——目的是保持 `@intermact/core` 无重依赖且完全确定；trait/部件 key 契约与设计稿一致，把 MathJax 的 SVG 交给 `parseSvgPath`+`composeGlyphs`（相同 token key）即可无缝替换为真实引擎，属里程碑边界下的等价实现，非降级。② 字体覆盖大写+数字+常用符号，小写以 small-caps（缩放大写）呈现。③ 文本经既有 stroke/fill 渲染，矢量字形天然分辨率无关（`text/font-scale` 示例），troika MSDF 文本视图列为后续增强。④ `svg`/`data` 接受内联字符串（core 无 DOM/fetch），URL 需宿主传入 `fetcher`，否则抛 `asset-load-error`。⑤ 顺带把 M8 的轴/矩阵/表格/`decimalNumber` 标签从 7-段字形升级到内置笔画字体（`labelContours`/`glyphText`），`text/seven-segment.ts` 保留为后备。depcruise 通过（108 模块 0 违规）。
+  - M10 示例：`text/writing`、`latex/transform-matching-tex`、`text/font-scale`。`text.test.ts` 11 项纳入 `pnpm run test`。
+- **M11 · 交互系统**（已完成）：
+  - 按 §12 在 `interaction/` 落地 core 交互层：`types.ts` 定义 `IntermactPointerEvent`/`IntermactDragEvent`（screen/sceneAbs/sceneRel 三套坐标）、`PointerEventBinding`、`DragBinding` 与 `PickProxy`（`disc`/`rect`/`band`）；`hit-test.ts` 提供解析命中（`pointInDisc`/`pointInRect`/`distanceToPolyline`/`hitProxy`/`hitTest` 按 zIndex）与 `pickBandFromObject`/`pickRectFromObject`；`object/traits.ts` 的 `InteractiveTrait` 扩展 `pick`/`binding`/`drag`/`cursor`。
+  - 按 §12.3 在 `draggable.ts` 落地 `draggablePoint(Source)`/`draggableValue(Source)`（拖拽写 `Signal`，几何以信号当前值居中，经 M6 derived 重算）+ 函数式 `interactive(obj, {pick,binding})`（供 `derived` 构建复用）；`scene/registered-object.ts` 增 `on(binding, pick)`，经 `DefinitionHost`（scene）回写对象定义。
+  - 按 §12.2 在 `render-r3f/interaction.ts` 提供纯函数正交反投影 `unprojectOrtho`/`projectOrtho` + `collectHitEntries`/`interactiveTraitOf`；`SceneView.tsx` 加 `interactive` prop，于 `gl.domElement` 监听 pointerdown/move/up，用 `Vector3.unproject` 反投影 + core `hitTest` 分发 binding/drag 并管理 cursor；`react/IntermactCanvas.tsx` 加 `keyboard`（空格 play/pause、方向键逐帧/±1s、Home/End 跳首尾）。
+  - **具体化/偏差**：① 命中用**场景空间解析求交**（pick 代理 + 指针 `unproject`）替代 §12.1 的"不可见 pick mesh + WebGL raycast line threshold"——2D 正交下结果等价，且确定/可无头测试、无 raycast 细线精度问题，属等价实现非降级。② 拖拽手柄几何以信号值为中心，须用 `registerReactive`/`*Source` 注册以随信号移动；`on()` 用于静态对象、`interactive()` 用于响应式构建（后者每帧重建会覆盖 `on()` 附加的 trait，故二者分工）。③ depcruise 通过（115 模块 0 违规）。
+  - M11 示例：`interaction/draggable-bezier`、`interaction/hit-testing`、`interaction/explorable-derivative`。`interaction.test.ts`（core 6 + render-r3f 3）纳入 `pnpm run test`。
+- **M12 · 布局 + Inspector**（已完成）：
+  - 按 §9.3 在 `runtime/world-transform.ts` 落地 world-transform 代数（`composeTransform2D`/`transformBounds`/`resolveTransform2D`/`worldDeltaToLocal`，纯函数、无 scene/animation 依赖）；`scene.setParent(child, parent)` 维护父链，`Player.getSnapshot` 在快照阶段沿父链 TRS 合成 world transform 并将透明度沿链相乘后写回 `RuntimeState.transform`（渲染适配器无需改动）。
+  - 按 §9.4 在 `scene/layout.ts` 落地 `LayoutHandle`（`getBounds`/`alignTo`/`nextTo`/`fitTo`/`arrange`），挂到 `RegisteredObject2D.layout`（`Scene.register` 注入，避免 scene↔handle 依赖环用 `LayoutHost`/`LayoutSelf` 接口解耦）；方法基于世界 bounds 计算、即时回写授权 transform 以支持链式布局，并返回 Animation 句柄。
+  - 按 §16 在 `react/Inspector.tsx` 落地 DOM 检视器：registry + 每对象世界 position/scale/opacity/zIndex/可见性、活跃 Track 数、`ReactiveEngine.inspect()` 的 signals/derived（含依赖）/updaters、SVG bounds 叠层与行点选高亮；`IntermactCanvas` 加 `controls.inspector`。
+  - **具体化/偏差**：① LayoutHandle 即时回写授权 transform（便于同一构建内链式布局）+ 返回可 `play`/`commit` 的 Animation，与 §9.4 "方法返回动画句柄" 一致；② world 合成放在 Player 快照阶段而非渲染层（保持 `RenderSnapshot` 为唯一渲染输入），`anchor` 仅用于 `alignTo` 对齐语义、渲染轴心仍为局部原点；③ Inspector bounds 投影默认按 `contain` fit 复算（`fit` prop 可覆盖），仅支持单一 fit 模式；④ `fitTo` 为等比缩放（保宽高比）。depcruise 通过（119 模块 0 违规）。
+  - M12 示例：`layout/next-to-arrange`、`layout/responsive-rect`、`devtools/inspector-tour`。`layout.test.ts` 11 项纳入 `pnpm run test`。
+
+- **Phase-2 验收后缺陷修复 / 打磨**（2026-06-08，示例联调发现）：
+  - **Examples 卡在 "Building…"**（Reactive/Math/Interaction/Inspector/L1 等依赖响应式的示例）：根因是示例 dev server 同时把 `@intermact/core` 经 `vite-tsconfig-paths` 解析到 `src`、又经 `node_modules` 解析到 `dist`，**双实例**使 `signal.ts` 的模块级 `WeakMap`（signal 注册表）不互通，构建期抛 `Unknown signal instance` 而静默失败。修复：`examples/vite.config.ts` 增 `resolve.alias` 把所有 `@intermact/*` 强制指向各自 `src` 单一实例；`react/useIntermactPlayer.ts` 对 `buildProgram` 失败 `.catch` 并 `console.error`（不再静默停在 Building）。属构建工具配置缺陷，非架构问题。
+  - **Morph 无动画**：`render-three/object-view.ts` 仅在 `geometryVersion` 变化时重建几何，而 morph 每帧只改 `geometryOverride`、不动版本号 → 渲染器只建首帧。修复：`animation/track.ts` 在 morph 的 `StatePatch` 写入**随进度变化的** `geometryVersion`（`arc-length`/`anchor`：`BASE + round(eased×SPAN)`；`cross-fade`：前/后半各一离散版本以触发换几何），动画结束即稳定。`group2D` 须显式顶层 `style` 才渲染（`morph/matching-shapes` 黑屏即缺顶层样式）。新增 `examples/src/lib/Caption.tsx` 为各 morph/text demo 叠加"该动画在演示什么"的说明。
+  - **Text/LaTeX 笔触细且粗细不一** → 改为 §13 的**常量笔宽轮廓字形**：新增 `geometry/stroke-outline.ts` 的 `strokeContoursToOutline`（中线骨架→等宽闭合轮廓：miter 连接含 `MITER_LIMIT` 回退 + 圆头端帽；开放子路径成"跑道"环，闭合子路径产外环 + 内环洞且**按 winding 自适应外扩方向**，故 `O` 等字怀挖空正确）。`text/text-layout.ts`、`text/latex.ts` 增 `GlyphStyleProps`（`weight`/`fill`/`stroke`/`strokeWidth`）+ `resolveGlyphStyle`，支持**实心 / 空心 / 描边+填充**三态且勾线色与填充色可分离。重写 `geometry/triangulate.ts`：earcut 现按 `signedArea` 区分实心（CCW）/洞（CW）、用 point-in-polygon 将洞归属到最小包含实心，**逐个不相连实心独立三角化再合并**（修复多字形/带洞字形填充溢出）。`render-three/stroke.ts` 的 `appendRibbon` 加 miter join + 圆头帽，使所有 ribbon 描边（含 M8 标签）等宽。
+  - 回归：全量 `pnpm run test` **132 项**全绿（含新增 `geometry/stroke-outline` 经由 `text`/`triangulate` 覆盖、`scene-view` 端帽顶点数断言更新）。
+- **Text/LaTeX 长期路径落地**（2026-06-08，§13 生产引擎接入）：
+  - **自定义 OpenType 字体**：`opentype.js` 解析 TTF/OTF/WOFF → `parseSvgPath` → 填充轮廓；`text/font-registry.ts` + `text/opentype-font.ts` 注册表；`AssetManager.font(src)` 经 `fetchBinary` 加载并注册，`textObject({ font })` / `placeString({ font })` 选用。轮廓字体跳过 `strokeContoursToOutline`（`weight: 0`），消除骨架字体在极尖处（如 V 底端）的轻微尖角伪影。
+  - **MathJax 3 LaTeX**：`text/mathjax-latex.ts` 用 `mathjax-full` lite adaptor 将 TeX 排为 SVG，提取 `<path d>` + `translate` 变换后经 `parseSvgPath` + `composeGlyphs`；`ctx.assets.latex(tex, { engine: "mathjax" })` 默认输出**衬线数学字形**（MathJax SVG 内置 STIX/Computer Modern 风格，符合公式排版惯例）。`engine: "builtin"` 保留无重依赖子集引擎供 headless 测试。MathJax 动态 import，未使用时不出现在热路径。
+  - **构建期资产**：`BuildOptions` / `IntermactCanvas` 增 `fetchBinary`（字体）与既有 `fetcher`（文本）；示例 `examples/src/lib/assetFetch.ts` + `@fontsource/dejavu-*`。
+  - 示例：`text/multi-font-writing`（DejaVu Sans/Serif 轮廓 + `write()`）、`latex/latex-writing`（MathJax 衬线公式 writing）。回归：**135** 项测试（含 OpenType 加载 + MathJax 布局）。
+- **移除笔画骨架字体 + 书写/填充机制升级**（2026-06-08）：
+  - **删除** `text/stroke-font.ts` 及 `strokeContoursToOutline` 文本路径；文本/LaTeX **仅** OpenType 填充轮廓 + MathJax SVG。构建期 `ctx.assets.font` + `setDefaultFont` 为同步标签 API 之前提。
+  - **字距修复**：OpenType `advance` 与路径坐标统一按 `emScale` 缩放（修复多字体 demo 全字叠在同一位置）。
+  - **Y 轴朝向修复**：`opentype.js` 的 `toPathData()` 为 SVG y-down；`parseSvgPath(..., { flipY: true })` 翻转为场景 y-up（大写/下降部在基线上方）。示例需硬刷新以重建 program（HMR 不自动重烘焙字形）。
+  - **闭合轮廓修复**：`toPathData()` 常省略 `Z`，导致字形子路径 `closed: false`、无 `fill` trait；书写阶段仅靠描边借色，结束后整行消失。`opentype-font.ts` 将字形轮廓一律标为 `closed: true`。
+  - **书写策略**：`write({ stroke: { direction: "ltr" | "rtl" | "simultaneous", glyphOverlap } })` 在编译期为每字形生成 `glyphWriteSpans`（`glyphOverlap` 控制下一字在前一字完成前开始的重叠比例；`simultaneous` 为全字同时起笔）。渲染器用 `text-layout.contourGlyphIndex` 按字形裁切描边；填充全程走 per-glyph fill group（完成后 `localFill=1`），避免 merged mesh 切换导致已完成行闪没。对比示例 `text/writing-strategies` 两行 **并行** `scene.play(a, b)` 同屏对照。
+  - **按字形 fill group**：`triangulateGroups` + `classifyFillGroup` 在机制上正确处理同字形的内外环（如 `0`、`\frac`），避免积分公式填充成内圈。
+  - `latex/transform-matching-tex` 改为 MathJax 衬线。回归：**141** 项测试（含闭合轮廓、LTR 描边裁切、多行书写持久可见）。
 
 ## 1. 愿景与范围
 
@@ -232,6 +295,8 @@ export interface Player {
 ```
 
 **为什么这样选**：Motion Canvas 用生成器把动画"描述"出来再由 `PlaybackManager` 做 `seek`；Remotion 把每帧表示为时间的纯函数以获得确定性导出。Intermact 取两者交集——保留 `async/await` 的书写体验（构建期糖衣），但底层落到可 seek 的时间线数据。`call(effect)` 这类不可逆副作用被显式标注为"不可 seek 边界"（见 §11.5）。
+
+**构建期约束（v0.1.3）**：program 构建必须可重入、**不得依赖进程级全局可变状态**（如模块级 signal registrar）。多 `IntermactCanvas`/多 program 并发构建时，信号注册等副作用须闭包在各自的 `ReactiveEngine` 上（`ctx.signal`）。`Create`/`fadeIn` 的「隐藏基线」在动画 **play 进 Storyboard 时**由编译器注入，而非工厂方法副作用。
 
 ### 3.3 数据流
 
@@ -416,7 +481,7 @@ export interface SampledContour2D {
 ### 5.2 采样、bounds、三角化
 
 - **弧长重采样**：曲线按弧长均匀重采样，保证 `Create` 描边速度均匀、Morph 对应点稳定。
-- **三角化**：填充用 earcut 处理凹多边形/带洞图形；`fillRule` 决定 nonzero/evenodd。
+- **三角化**：填充用 earcut 处理凹多边形/带洞图形（首轮廓外环、其余为洞，nonzero 语义）。`fillRule: "evenodd"` 类型已预留；**自相交 even-odd 实现**推迟至 M9/M16（v0.1 仅 nonzero + holes）。
 - **等值线**：标量场用 marching squares 生成 isoline（PCG，§6.2）。
 - **bounds**：所有对象提供 `getBounds()`，供布局/相对定位/相机取景（§7、§9）。
 
@@ -875,6 +940,8 @@ await scene.play(
 
 修正 v0.1 的不一致：按 `intro.md`，Camera 是**注册进 Scene 的特殊对象**，从而可被动画、可被父子挂载（实现"相机跟随对象"）。`ctx.createCamera*` 是便捷工厂，内部仍走 `scene.register`。
 
+> **v0.1 实现偏差**：`createCamera2D` 当前返回游离的 `{ id, position, zoom }`，**未**经 `scene.register`；2D MVP 由视口 `computeFit` 驱动正交相机，尚不需要相机动画。Camera 注册化与可动画性推迟至 **M14（3D 相机）**。
+
 ```ts
 export interface Camera2DProps {
   readonly projection: "orthographic";
@@ -1181,6 +1248,8 @@ export interface SceneRendererAdapter {
   dispose(): void;
 }
 ```
+
+> **v0.1 履约方式**：R3F 路径以 `SceneView` + `ThreeSceneView` 组件模型 diff 快照，未实现独立的 `mount/render` 适配器类；无头/WebGPU 后端在 M16/M17 补真正实现该接口的 adapter。
 
 ### 15.2 性能策略
 
@@ -1498,7 +1567,8 @@ export function NestedSceneExample() {
 4. `Create`/`FadeIn` 等在 `play` 前不显示对象。
 5. 时间是一等数据：程序产出可检视/序列化的 Storyboard，Player 负责求值。
 6. core 不依赖 React/Three/DOM；渲染器、对象、生成器、动画均可经注册表扩展。
-7. Camera 注册进 Scene、可动画、可父子挂载，但不混入普通几何对象接口。
-8. Scene 不依赖 Canvas；Canvas 可挂载多视口（rect）并嵌入 `RenderedScene`。
-9. 外部实验数据经构建期资源解析或信号注入，不在渲染帧重复昂贵计算。
-10. PCG 随机必须来自种子化 RNG，保证可复现与可分享。
+7. Camera 注册进 Scene、可动画、可父子挂载，但不混入普通几何对象接口（v0.1 2D 路径为偏差，见 §10.1）。
+8. 构建期无进程级全局可变状态；多 program 并发构建须互不干扰（见 §3.2）。
+9. Scene 不依赖 Canvas；Canvas 可挂载多视口（rect）并嵌入 `RenderedScene`。
+10. 外部实验数据经构建期资源解析或信号注入，不在渲染帧重复昂贵计算。
+11. PCG 随机必须来自种子化 RNG，保证可复现与可分享。

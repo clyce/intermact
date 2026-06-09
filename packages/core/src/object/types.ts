@@ -23,9 +23,21 @@ export interface IMObjectBase<TDimension extends Dimension> {
   readonly metadata?: ObjectMetadata;
 }
 
+/**
+ * A keyed sub-object of a composite (design.md §5.3, §11.4). Parts carry the
+ * matching key used by `transformMatching` (transformer/remover/introducer);
+ * formulas (M10) reuse this with token-derived keys.
+ */
+export interface ObjectPart2D {
+  readonly key: string;
+  readonly object: IMObject2D;
+}
+
 /** A 2D object definition. */
 export interface IMObject2D extends IMObjectBase<"2d"> {
   readonly geometry: GeometryProvider2D;
+  /** Keyed sub-objects for composite objects (`group2D`); used by morph matching. */
+  readonly parts?: readonly ObjectPart2D[];
 }
 
 /** A 3D object definition (full set lands in M14). */

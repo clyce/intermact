@@ -3,7 +3,7 @@ import { useControls } from "leva";
 import { createProgram, decimalNumber, derived, functionGraph, signal, xy } from "@intermact/core";
 import { IntermactCanvas } from "@intermact/react";
 
-/** M6 / design.md §19.2: Leva parameters bound to signals — program builds once. */
+/** M6 / design.md §19.2: Leva parameters bound to signals �?program builds once. */
 export function LevaBindingDemo() {
   const leva = useControls({
     amplitude: { value: 1, min: 0.1, max: 2, step: 0.05 },
@@ -48,7 +48,7 @@ export function LevaBindingDemo() {
   }, [freq, leva.frequency]);
 
   return (
-    <div style={{ height: 480 }}>
+    <div style={{ height: "100%" }}>
       <IntermactCanvas program={program} autoplay />
     </div>
   );

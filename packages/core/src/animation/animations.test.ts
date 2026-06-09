@@ -69,6 +69,24 @@ describe("basic animations (M4)", () => {
     expect(stateOf(player, id).transform.position).toEqual([2, 1]);
   });
 
+  it("fadeIn does not change baseline until played", async () => {
+    let id = "";
+    const program = createProgram(async (ctx) => {
+      const scene = ctx.createScene2D({
+        coordinate: "cartesian",
+        domain: { x: [-2, 2], y: [-2, 2] },
+      });
+      ctx.mount(scene, ctx.createCamera2D(scene));
+      const c = scene.register(circle({ radius: 1, style: { fill: "#fff" } }));
+      id = c.id;
+      c.fadeIn({ duration: 1, easing: "linear" });
+      await scene.wait(0);
+    });
+    const { player } = await buildProgram(program);
+    player.seek(0);
+    expect(stateOf(player, id).opacity).toBe(1);
+  });
+
   it("fadeIn starts from opacity 0", async () => {
     let id = "";
     const program = createProgram(async (ctx) => {

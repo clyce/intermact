@@ -57,12 +57,9 @@ export function HeadlessEvalDemo() {
   }, []);
 
   return (
-    <div style={{ padding: 24 }}>
-      <h2 style={{ marginTop: 0 }}>Headless evaluation</h2>
-      <p style={{ color: "#94a3b8", maxWidth: 680 }}>
-        The same <code>buildProgram</code> runs without any renderer. We seek to fixed times and
-        print RuntimeState — exactly what a Node test / export pipeline does. Total duration{" "}
-        {duration.toFixed(2)}s.
+    <div style={{ padding: "48px 24px 24px", overflow: "auto", height: "100%", boxSizing: "border-box" }}>
+      <p style={{ color: "#94a3b8", maxWidth: 680, marginTop: 0 }}>
+        Total storyboard duration: {duration.toFixed(2)}s.
       </p>
       <table
         style={{ borderCollapse: "collapse", fontFamily: "ui-monospace, monospace", fontSize: 13 }}

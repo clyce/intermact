@@ -7,9 +7,10 @@ import { tweenSignal } from "./tween-signal";
 
 describe("reactive layer (M6)", () => {
   it("derived rebuilds when deps change", async () => {
-    const amp = signal(1);
+    let amp = signal(1);
     let buildCount = 0;
     const program = createProgram(async (ctx) => {
+      amp = ctx.signal(1);
       const scene = ctx.createScene2D({
         coordinate: "cartesian",
         domain: { x: [-1, 1], y: [-1, 1] },
@@ -35,7 +36,7 @@ describe("reactive layer (M6)", () => {
   it("tweenSignal is seekable", async () => {
     let t = valueTracker(0);
     const program = createProgram(async (ctx) => {
-      t = valueTracker(0);
+      t = ctx.valueTracker(0);
       const scene = ctx.createScene2D({
         coordinate: "cartesian",
         domain: { x: [-1, 1], y: [-1, 1] },

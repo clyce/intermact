@@ -33,6 +33,14 @@ export interface Bounds2D {
   readonly center: AbsXY;
 }
 
+/** Axis-aligned bounding box in 3D world space (M14). */
+export interface Bounds3D {
+  readonly min: readonly [number, number, number];
+  readonly max: readonly [number, number, number];
+  readonly size: readonly [number, number, number];
+  readonly center: readonly [number, number, number];
+}
+
 /** Options controlling path sampling density. */
 export interface PathSampleOptions {
   /** Target number of samples per contour (provider may adapt). */
@@ -51,10 +59,16 @@ export interface GeometryProvider2D {
   getBounds(): Bounds2D;
   /** Performance channel: interleaved buffer, avoiding per-point allocation. */
   sampleBuffer?(opts?: PathSampleOptions): Float32Array;
+  /** Optional wider contour path rendered as {@link ObjectStyle.underlayFill}. */
+  sampleUnderlayPath?(opts?: PathSampleOptions): SampledPath2D | null;
+  /** Per-glyph fill groups (text/LaTeX); triangulated independently. */
+  sampleFillGroups?(opts?: PathSampleOptions): SampledContour2D[][] | null;
+  /** Flat contour index → glyph index for sequential write reveal. */
+  contourGlyphIndex?(): readonly number[] | null;
 }
 
 /** 3D geometry provider (mesh / surface / point cloud). Implemented in M14. */
 export interface GeometryProvider3D {
   readonly capabilities: readonly GeometryCapability[];
-  getBounds(): Bounds2D;
+  getBounds(): Bounds3D;
 }

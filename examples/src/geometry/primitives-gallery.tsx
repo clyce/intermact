@@ -10,13 +10,14 @@ import {
   rectangle,
   xy,
 } from "@intermact/core";
-import { GeometryView } from "../lib/SvgGeometry";
+import { IntermactCanvas } from "@intermact/react";
+import { geometryPreviewProgram } from "../lib/geometryPreviewProgram";
 
 /**
  * `examples/geometry/primitives-gallery` (dev-roadmap.md M2).
  *
  * Every 2D primitive at a glance, including a holed polygon and a compound
- * Bézier, rendered by sampling each object's stroke/fill traits.
+ * Bézier, rendered via the real R3F pipeline (`IntermactCanvas`).
  */
 const items: { title: string; object: IMObject2D }[] = [
   {
@@ -93,8 +94,8 @@ export function PrimitivesGalleryDemo() {
     <div style={{ padding: 24 }}>
       <h2 style={{ marginTop: 0 }}>Primitives gallery</h2>
       <p style={{ color: "#94a3b8", maxWidth: 680 }}>
-        All eight 2D primitives, sampled to stroke/fill geometry. Holed polygon uses the even-odd
-        fill rule; the Bézier is a cubic chain.
+        All eight 2D primitives via <code>IntermactCanvas</code>. Holed polygon uses nonzero +
+        ring/holes triangulation; the Bézier is a cubic chain.
       </p>
       <div
         style={{
@@ -105,7 +106,9 @@ export function PrimitivesGalleryDemo() {
       >
         {items.map((it) => (
           <figure key={it.title} style={{ margin: 0 }}>
-            <GeometryView object={it.object} />
+            <div style={{ height: 220, borderRadius: 8, overflow: "hidden" }}>
+              <IntermactCanvas program={geometryPreviewProgram(it.object)} />
+            </div>
             <figcaption style={{ color: "#cbd5e1", fontSize: 13, marginTop: 6 }}>
               {it.title}
             </figcaption>

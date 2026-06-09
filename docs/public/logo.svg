@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 28" fill="none">
+  <circle cx="14" cy="14" r="10" stroke="#38bdf8" stroke-width="2"/>
+  <path d="M6 18 L14 6 L22 18 Z" fill="rgba(56,189,248,0.3)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="32" y="19" font-family="system-ui,sans-serif" font-size="16" font-weight="600" fill="#e2e8f0">Intermact</text>
+</svg>

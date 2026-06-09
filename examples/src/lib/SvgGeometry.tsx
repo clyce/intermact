@@ -2,15 +2,20 @@ import { type Bounds2D, findTrait, type IMObject2D, triangulate } from "@interma
 
 type ToScreen = (x: number, y: number) => [number, number];
 
-/** Build a padded square domain around an object's bounds. */
+/**
+ * Build a padded *square* domain centered on the object's bounds. Using a single
+ * extent for both axes preserves aspect ratio when mapped into the square SVG
+ * viewport, so e.g. a near-horizontal arrow is not stretched into a diagonal.
+ */
 function domainFor(bounds: Bounds2D, pad = 0.2): { x: [number, number]; y: [number, number] } {
   const w = bounds.size[0] || 1;
   const h = bounds.size[1] || 1;
-  const px = w * pad;
-  const py = h * pad;
+  const cx = (bounds.min[0] + bounds.max[0]) / 2;
+  const cy = (bounds.min[1] + bounds.max[1]) / 2;
+  const half = (Math.max(w, h) * (1 + 2 * pad)) / 2;
   return {
-    x: [bounds.min[0] - px, bounds.max[0] + px],
-    y: [bounds.min[1] - py, bounds.max[1] + py],
+    x: [cx - half, cx + half],
+    y: [cy - half, cy + half],
   };
 }
 
@@ -57,6 +62,7 @@ export function GeometryView({
   const opts = samples !== undefined ? { samples } : undefined;
   const path = object.geometry.samplePath(opts);
   const fill = findTrait(object.traits, "fill");
+  const fillContours = fill?.contours(opts) ?? [];
   const style = object.style ?? {};
 
   return (
@@ -74,9 +80,9 @@ export function GeometryView({
         />
       )}
 
-      {fill && (
+      {fill && fillContours.length > 0 && (
         <path
-          d={path.contours.map((c) => contourPath(c.points, c.closed, toScreen)).join(" ")}
+          d={fillContours.map((c) => contourPath(c.points, c.closed, toScreen)).join(" ")}
           fill={style.fill ?? "rgba(56,189,248,0.25)"}
           fillRule={fill.fillRule === "evenodd" ? "evenodd" : "nonzero"}
           stroke="none"
@@ -85,8 +91,9 @@ export function GeometryView({
 
       {showTriangulation &&
         fill &&
+        fillContours.length > 0 &&
         (() => {
-          const tri = triangulate(path.contours);
+          const tri = triangulate(fillContours);
           const lines: string[] = [];
           for (let i = 0; i < tri.indices.length; i += 3) {
             const a = tri.indices[i]! * 2;
