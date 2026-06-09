@@ -29,7 +29,10 @@ export function getRegisteredFont(id: string): RegisteredFont | undefined {
 /** Set the fallback font id for sync text APIs (`labelContours`, etc.). */
 export function setDefaultFont(id: string): void {
   if (!registry.has(id)) {
-    throw new IntermactError("asset-load-error", `Cannot set default font: "${id}" is not registered.`);
+    throw new IntermactError(
+      "asset-load-error",
+      `Cannot set default font: "${id}" is not registered.`,
+    );
   }
   defaultFontId = id;
 }

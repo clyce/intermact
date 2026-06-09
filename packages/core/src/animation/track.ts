@@ -426,7 +426,9 @@ export function compileSpec(
               opacity: Math.abs(2 * eased - 1),
               geometryOverride: { contours: firstHalf ? fromGeo : toGeo },
               // Signal the renderer to rebuild meshes when the geometry swaps.
-              geometryVersion: firstHalf ? MORPH_GEOMETRY_VERSION_BASE : MORPH_GEOMETRY_VERSION_BASE + 1,
+              geometryVersion: firstHalf
+                ? MORPH_GEOMETRY_VERSION_BASE
+                : MORPH_GEOMETRY_VERSION_BASE + 1,
             };
             if (!spec.preserveStyle) {
               changes.styleOverrides = firstHalf ? source.style : spec.toObject.style;
@@ -457,7 +459,8 @@ export function compileSpec(
           // once the morph has finished).
           const changes: RuntimeState2DPatch = {
             geometryOverride,
-            geometryVersion: MORPH_GEOMETRY_VERSION_BASE + Math.round(eased * MORPH_GEOMETRY_VERSION_SPAN),
+            geometryVersion:
+              MORPH_GEOMETRY_VERSION_BASE + Math.round(eased * MORPH_GEOMETRY_VERSION_SPAN),
           };
           if (!spec.preserveStyle && eased >= 1) {
             changes.styleOverrides = spec.toObject.style;

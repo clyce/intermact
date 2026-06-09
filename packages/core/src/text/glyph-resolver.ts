@@ -15,7 +15,10 @@ export function glyphFor(char: string, fontId?: string): Glyph {
   const id = resolveFontId(fontId);
   const face = getRegisteredFont(id);
   if (!face) {
-    throw new IntermactError("asset-load-error", `Font "${id}" is not registered. Load it via ctx.assets.font() first.`);
+    throw new IntermactError(
+      "asset-load-error",
+      `Font "${id}" is not registered. Load it via ctx.assets.font() first.`,
+    );
   }
   return face.glyphFor(char);
 }

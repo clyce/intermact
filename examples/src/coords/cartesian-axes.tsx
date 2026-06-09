@@ -1,5 +1,5 @@
 import { circle, createProgram, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /** M5: getAxes + fadeIn/fadeOut via RegisteredObject animation API. */
 const program = createProgram(async (ctx) => {
@@ -34,7 +34,7 @@ const program = createProgram(async (ctx) => {
 export function CartesianAxesDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }

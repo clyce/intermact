@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { circle, polygon, rectangle, xy, type IMObject2D } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 import { samplingDebugProgram } from "../lib/geometryPreviewProgram";
 
 /**
@@ -36,7 +36,7 @@ export function SamplingDebugDemo() {
       <h2 style={{ marginTop: 0 }}>Sampling debug</h2>
       <p style={{ color: "#94a3b8", maxWidth: 680 }}>
         Red dots are arc-length sample points, the orange box is the AABB, purple lines are the
-        earcut triangulation â€?all rendered through <code>IntermactCanvas</code>.
+        earcut triangulation ï¿½?all rendered through <code>IntermactCanvas</code>.
       </p>
       <div
         style={{
@@ -79,7 +79,7 @@ export function SamplingDebugDemo() {
         </label>
       </div>
       <div style={{ height: "100%", maxWidth: 420, borderRadius: 8, overflow: "hidden" }}>
-        <IntermactCanvas program={program} />
+        <DemoCanvas program={program} />
       </div>
     </div>
   );

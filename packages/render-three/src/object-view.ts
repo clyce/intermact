@@ -152,9 +152,7 @@ export class ThreeObjectView {
     geometryChanged: boolean,
   ): void {
     const fill = findTrait(this.object.traits, "fill");
-    const groups = state.geometryOverride
-      ? null
-      : (fill?.fillGroups?.() ?? null);
+    const groups = state.geometryOverride ? null : (fill?.fillGroups?.() ?? null);
     const contours = this.resolveFillContours(state);
     if (!contours || !style.fill) {
       this.disposeFill();
@@ -272,9 +270,7 @@ export class ThreeObjectView {
     const contourGlyphIndex =
       layout?.contourGlyphIndex() ?? fillTrait?.contourGlyphIndex?.() ?? undefined;
     const revealOpts =
-      !writeComplete &&
-      state.glyphWriteSpans?.length &&
-      contourGlyphIndex?.length
+      !writeComplete && state.glyphWriteSpans?.length && contourGlyphIndex?.length
         ? {
             contourGlyphIndex,
             glyphWriteSpans: state.glyphWriteSpans,

@@ -88,7 +88,11 @@ export function IntermactCanvas({
   style,
   chrome,
 }: IntermactCanvasProps) {
-  const built = useIntermactPlayer(program, { ...(seed !== undefined ? { seed } : {}), fetcher, fetchBinary });
+  const built = useIntermactPlayer(program, {
+    ...(seed !== undefined ? { seed } : {}),
+    fetcher,
+    fetchBinary,
+  });
 
   const wrapperStyle: CSSProperties = {
     position: "relative",

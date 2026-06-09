@@ -1,6 +1,5 @@
 import { createProgram, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
-import { exampleAssetFetch, exampleAssetFetchBinary } from "../lib/assetFetch";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /** MathJax serif LaTeX with left-to-right sequential writing. */
 const program = createProgram(async (ctx) => {
@@ -37,13 +36,7 @@ const program = createProgram(async (ctx) => {
 export function LatexWritingDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas
-        program={program}
-        autoplay
-        controls={{ timeline: true }}
-        fetcher={exampleAssetFetch}
-        fetchBinary={exampleAssetFetchBinary}
-      />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { createProgram, textObject, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
-import { exampleAssetFetch, exampleAssetFetchBinary } from "../lib/assetFetch";
+import { DemoCanvas } from "../lib/DemoCanvas";
 import { loadDemoFonts } from "../lib/loadFonts";
 
 /** DejaVu Sans vs Serif outline fonts with sequential left-to-right writing. */
@@ -59,13 +58,7 @@ const program = createProgram(async (ctx) => {
 export function MultiFontWritingDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas
-        program={program}
-        autoplay
-        controls={{ timeline: true }}
-        fetcher={exampleAssetFetch}
-        fetchBinary={exampleAssetFetchBinary}
-      />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }

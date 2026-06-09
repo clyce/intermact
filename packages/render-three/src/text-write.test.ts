@@ -11,7 +11,9 @@ import {
   setDefaultFont,
   textObject,
   xy,
+  type IMObject2D,
 } from "@intermact/core";
+import type { Mesh } from "three";
 import { loadTestFont } from "../../core/src/text/test-font";
 import { ThreeObjectView } from "./object-view";
 import { buildStrokeGeometry } from "./stroke";
@@ -20,9 +22,8 @@ const require = createRequire(import.meta.url);
 
 beforeAll(async () => {
   clearFontRegistry();
-  const fontPath = require.resolve(
-    "@fontsource/dejavu-sans/files/dejavu-sans-latin-400-normal.woff",
-  );
+  const fontPath =
+    require.resolve("@fontsource/dejavu-sans/files/dejavu-sans-latin-400-normal.woff");
   const assets = createAssetManager({
     fetchBinary: async () => {
       const b = readFileSync(fontPath);
@@ -53,7 +54,9 @@ describe("text write rendering (M3)", () => {
         }),
       );
       lineId = line.id;
-      await scene.play(line.write({ duration: 1.2, stroke: { direction: "ltr", glyphOverlap: 0.1 } }));
+      await scene.play(
+        line.write({ duration: 1.2, stroke: { direction: "ltr", glyphOverlap: 0.1 } }),
+      );
     });
     const { player } = await buildProgram(program);
     player.seek(1.2);
@@ -63,7 +66,7 @@ describe("text write rendering (M3)", () => {
     const fill = findTrait(render.object.traits, "fill");
     expect(fill?.contours().length).toBeGreaterThan(0);
 
-    const view = new ThreeObjectView(render.object);
+    const view = new ThreeObjectView(render.object as IMObject2D);
     view.update(render, { worldPerPixel: 0.01 });
     expect(view.group.children.length).toBeGreaterThan(0);
     view.dispose();
@@ -146,7 +149,7 @@ describe("text write rendering (M3)", () => {
     for (const t of [2.19, 2.2, 2.21, 2.5]) {
       player.seek(t);
       const line1 = player.getSnapshot().objects.get(ids[0]!)!;
-      const view = new ThreeObjectView(line1.object);
+      const view = new ThreeObjectView(line1.object as IMObject2D);
       view.update(line1, { worldPerPixel: 0.01 });
       const visibleMeshes = view.group.children.filter((c) => c.visible);
       expect(visibleMeshes.length, `t=${t}`).toBeGreaterThan(0);
@@ -193,12 +196,11 @@ describe("text write rendering (M3)", () => {
     expect(expectedLtr.getAttribute("position").count).toBeLessThan(
       expectedSim.getAttribute("position").count,
     );
-    const view = new ThreeObjectView(render.object);
+    const view = new ThreeObjectView(render.object as IMObject2D);
     view.update(render, { worldPerPixel: 0.01 });
     const strokeMesh = view.group.children.find((c) => c.renderOrder > 0);
     expect(strokeMesh).toBeTruthy();
-    const viewVerts = (strokeMesh as { geometry: { getAttribute: (n: string) => { count: number } } })
-      .geometry.getAttribute("position").count;
+    const viewVerts = (strokeMesh as Mesh).geometry.getAttribute("position").count;
     expect(viewVerts).toBe(expectedLtr.getAttribute("position").count);
     expect(viewVerts).toBeLessThan(expectedSim.getAttribute("position").count);
     view.dispose();

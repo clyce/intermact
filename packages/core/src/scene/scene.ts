@@ -132,6 +132,13 @@ export class Scene2D implements LayoutHost {
     if (ro) ro.replaceObject(object);
   }
 
+  /** Authoring transform for reactive updater sync ({@link ReactiveEngine.flush}). */
+  getAuthoringTransform(id: string): ResolvedTransform2D | undefined {
+    const ro = this.registered.get(id);
+    if (!ro) return undefined;
+    return resolveTransform2D(ro.getTransform());
+  }
+
   /** Register a transform-only empty node for hierarchies. */
   registerEmpty(transform: Transform2D = {}): RegisteredObject2D {
     return this.register(emptyObject2D(), transform);

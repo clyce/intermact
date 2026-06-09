@@ -8,7 +8,7 @@ import {
   polyline,
   xy,
 } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * M7 / design.md §7.3: a log-scale plot. `y = 2^x` is exponential on a linear
@@ -100,7 +100,7 @@ export function LogPlotDemo() {
         <div style={{ fontFamily: "monospace" }}>{yLog.ticks(6).map(fmt).join("  ")}</div>
       </div>
       <div style={{ flex: 1 }}>
-        <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
+        <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
       </div>
     </div>
   );

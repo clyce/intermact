@@ -11,7 +11,7 @@ import {
   xy,
   type RiemannSample,
 } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * M8 / design.md §7.4: Riemann rectangles that converge to the true area as `n`
@@ -74,9 +74,9 @@ export function RiemannSumDemo() {
 
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} autoplay />
+      <DemoCanvas program={program} autoplay />
       <p style={{ color: "#94a3b8", fontSize: 13, margin: "8px 0 0" }}>
-        Riemann sum of x² on [0, 3] �?converges to 9. Increase <code>n</code> to watch the
+        Riemann sum of x² on [0, 3] �?converges to 9. Increase <code>n</code> to watch the
         approximation tighten.
       </p>
     </div>

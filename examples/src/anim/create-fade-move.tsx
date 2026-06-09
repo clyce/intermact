@@ -1,5 +1,5 @@
 import { circle, createProgram, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /** M4: Create / Fade / Move / Rotate / Scale gallery. */
 const program = createProgram(async (ctx) => {
@@ -41,7 +41,7 @@ const program = createProgram(async (ctx) => {
 export function CreateFadeMoveDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }

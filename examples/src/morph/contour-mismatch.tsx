@@ -1,5 +1,5 @@
 import { circle, createProgram, group2D, polygon, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * M9 / design.md §11.4: morphing across differing contour counts. The left
@@ -57,7 +57,7 @@ const program = createProgram(async (ctx) => {
 export function ContourMismatchDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }

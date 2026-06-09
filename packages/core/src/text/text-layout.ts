@@ -262,7 +262,9 @@ export function resolveGlyphStyle(props: GlyphStyleProps): ObjectStyle {
   return {
     fillRule: "nonzero",
     ...(hasFill ? { fill: props.fill } : {}),
-    ...(hasStroke ? { stroke: props.stroke, lineWidth: props.strokeWidth ?? DEFAULT_OUTLINE_WIDTH } : {}),
+    ...(hasStroke
+      ? { stroke: props.stroke, lineWidth: props.strokeWidth ?? DEFAULT_OUTLINE_WIDTH }
+      : {}),
   };
 }
 

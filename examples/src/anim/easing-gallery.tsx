@@ -1,5 +1,5 @@
 import { circle, createProgram, easings, type EasingName, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 const EASING_NAMES = Object.keys(easings) as EasingName[];
 
@@ -31,7 +31,7 @@ const program = createProgram(async (ctx) => {
 export function EasingGalleryDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }

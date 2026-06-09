@@ -8,7 +8,7 @@ import {
   wait,
   xy,
 } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /** L1 / design.md §19.1: Create, axes, arc-length morph, seekable timeline. */
 const program = createProgram(async (ctx) => {
@@ -66,7 +66,7 @@ const program = createProgram(async (ctx) => {
 export function Basic2DDemo() {
   return (
     <div style={{ height: 520 }}>
-      <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }

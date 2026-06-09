@@ -8,11 +8,11 @@ import {
   xy,
   type AbsXY,
 } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * M11 / design.md §12.3: draggable control points wired to signals. Drag any
- * handle �?the Bézier curve and its control polygon recompute through the
+ * handle �?the Bézier curve and its control polygon recompute through the
  * reactive engine (no rebuild, no animation). Try it with the mouse.
  */
 const program = createProgram(async (ctx) => {
@@ -60,7 +60,7 @@ const program = createProgram(async (ctx) => {
 export function DraggableBezierDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} controls={{ timeline: true }} />
+      <DemoCanvas program={program} controls={{ timeline: true }} />
     </div>
   );
 }

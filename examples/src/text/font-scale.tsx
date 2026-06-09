@@ -1,6 +1,5 @@
 import { createProgram, textObject, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
-import { exampleAssetFetch, exampleAssetFetchBinary } from "../lib/assetFetch";
+import { DemoCanvas } from "../lib/DemoCanvas";
 import { loadDemoFonts } from "../lib/loadFonts";
 
 /** Vector outline glyphs at multiple scales (DejaVu Sans). */
@@ -56,13 +55,7 @@ const program = createProgram(async (ctx) => {
 export function FontScaleDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas
-        program={program}
-        autoplay
-        controls={{ timeline: true }}
-        fetcher={exampleAssetFetch}
-        fetchBinary={exampleAssetFetchBinary}
-      />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }

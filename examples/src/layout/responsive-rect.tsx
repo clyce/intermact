@@ -7,7 +7,7 @@ import {
   type AbsXY,
   type RelUV,
 } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * M12 / design.md §9.4: RectTransform-style responsive anchoring. Labels are
@@ -53,7 +53,7 @@ const program = createProgram(async (ctx) => {
 export function ResponsiveRectDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} />
+      <DemoCanvas program={program} />
     </div>
   );
 }

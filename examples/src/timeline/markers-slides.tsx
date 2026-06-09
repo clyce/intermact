@@ -1,5 +1,5 @@
 import { circle, createProgram, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * `examples/timeline/markers-slides` (dev-roadmap.md M1).
@@ -32,11 +32,11 @@ export function MarkersSlidesDemo() {
     <div style={{ padding: 24 }}>
       <h2 style={{ marginTop: 0 }}>Markers &amp; slides</h2>
       <p style={{ color: "#94a3b8", maxWidth: 640 }}>
-        Each marker is a chapter bookmark. Click one to <code>jumpToMarker</code> â€?slide-style
+        Each marker is a chapter bookmark. Click one to <code>jumpToMarker</code> ï¿½?slide-style
         presentation navigation built on the same seekable timeline.
       </p>
       <div style={{ height: "100%" }}>
-        <IntermactCanvas
+        <DemoCanvas
           program={program}
           controls={{ timeline: true }}
           chrome={(built) => {

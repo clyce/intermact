@@ -61,7 +61,9 @@ export function createGeometryProvider2D(config: GeometryProviderConfig): Geomet
     const useResample = count !== undefined && opts?.arcLength !== false;
     return fillGroupsRaw.map((group) =>
       group.map((raw) => {
-        const points = useResample ? resampleByArcLength(raw.points, raw.closed, count) : raw.points;
+        const points = useResample
+          ? resampleByArcLength(raw.points, raw.closed, count)
+          : raw.points;
         return toSampledContour(points, raw.closed);
       }),
     );

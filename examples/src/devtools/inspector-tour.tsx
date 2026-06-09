@@ -8,7 +8,7 @@ import {
   xy,
   type AbsXY,
 } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * M12 / design.md §16: Inspector tour. Open the panel (top-right): it shows the
@@ -53,7 +53,7 @@ const program = createProgram(async (ctx) => {
 export function InspectorTourDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} controls={{ timeline: true, inspector: true }} />
+      <DemoCanvas program={program} controls={{ timeline: true, inspector: true }} />
     </div>
   );
 }

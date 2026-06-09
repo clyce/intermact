@@ -1,7 +1,7 @@
 import { circle, createProgram, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
-/** M5: polar coordinate scene â€?points placed via fromPolar. */
+/** M5: polar coordinate scene ï¿½?points placed via fromPolar. */
 const program = createProgram(async (ctx) => {
   const scene = ctx.createScene2D({
     coordinate: "polar",
@@ -35,7 +35,7 @@ const program = createProgram(async (ctx) => {
 export function PolarSceneDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }

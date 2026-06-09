@@ -1,16 +1,20 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useControls } from "leva";
 import {
   createProgram,
+  derived,
+  group2D,
   line,
   linearScale,
   logScale,
   powScale,
-  type Scale,
+  signal,
   timeScale,
+  type IMObject2D,
+  type Scale,
   xy,
 } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /** A labelled row in the playground: a scale plus where to draw it. */
 interface ScaleRow {
@@ -25,6 +29,41 @@ interface ScaleRow {
 
 const RANGE: [number, number] = [0, 10];
 
+/** Build legend + geometry rows for the current Leva parameters. */
+function computeScaleRows(exponent: number, tickCount: number): ScaleRow[] {
+  const linear = linearScale([0, 100], RANGE);
+  const pow = powScale([0, 100], RANGE, exponent);
+  const log = logScale([1, 1000], RANGE);
+  const time = timeScale([new Date(Date.UTC(2020, 0, 1)), new Date(Date.UTC(2020, 0, 11))], RANGE);
+  return [
+    mkNumberRow("linear [0,100]", linear, tickCount, 3.5),
+    mkNumberRow(`pow ^${exponent.toFixed(1)} [0,100]`, pow, tickCount, 2),
+    mkNumberRow("log [1,1000]", log, tickCount, 0.5),
+    mkTimeRow("time (10 days)", time, tickCount, -1),
+  ];
+}
+
+/** Composite tick marks for all scale rows (rebuilt when signals change). */
+function scalePlaygroundObject(exponent: number, tickCount: number): IMObject2D {
+  const rows = computeScaleRows(exponent, tickCount);
+  const children = rows.flatMap((row) => [
+    line({
+      from: xy(0, row.y),
+      to: xy(10, row.y),
+      style: { stroke: "#475569", lineWidth: 0.02 },
+    }),
+    ...row.positions.map((pos) =>
+      line({
+        from: xy(pos, row.y - 0.16),
+        to: xy(pos, row.y + 0.16),
+        style: { stroke: "#38bdf8", lineWidth: 0.025 },
+      }),
+    ),
+  ]);
+  // group2D needs a top-level style or the composite renders nothing (see morph/matching-shapes).
+  return group2D(children, { style: { stroke: "#38bdf8", lineWidth: 0.025 } });
+}
+
 /**
  * M7 / design.md §7.3: compare linear / pow / log / time scales. Each scale maps
  * its data domain onto the same world range `[0,10]`; we draw a baseline and a
@@ -37,22 +76,9 @@ export function ScalePlaygroundDemo() {
     exponent: { value: 0.5, min: 0.2, max: 3, step: 0.1 },
   });
 
-  const { program, rows } = useMemo(() => {
-    const linear = linearScale([0, 100], RANGE);
-    const pow = powScale([0, 100], RANGE, exponent);
-    const log = logScale([1, 1000], RANGE);
-    const time = timeScale(
-      [new Date(Date.UTC(2020, 0, 1)), new Date(Date.UTC(2020, 0, 11))],
-      RANGE,
-    );
-
-    const rows: ScaleRow[] = [
-      mkNumberRow("linear [0,100]", linear, tickCount, 3.5),
-      mkNumberRow(`pow ^${exponent.toFixed(1)} [0,100]`, pow, tickCount, 2),
-      mkNumberRow("log [1,1000]", log, tickCount, 0.5),
-      mkTimeRow("time (10 days)", time, tickCount, -1),
-    ];
-
+  const { expSig, countSig, program } = useMemo(() => {
+    const expSig = signal(0.5);
+    const countSig = signal(10);
     const program = createProgram(async (ctx) => {
       const scene = ctx.createScene2D({
         coordinate: "cartesian",
@@ -60,29 +86,21 @@ export function ScalePlaygroundDemo() {
         background: "#0b1020",
       });
       ctx.mount(scene, ctx.createCamera2D(scene));
-
-      for (const row of rows) {
-        scene.register(
-          line({
-            from: xy(0, row.y),
-            to: xy(10, row.y),
-            style: { stroke: "#475569", lineWidth: 0.02 },
-          }),
-        );
-        for (const pos of row.positions) {
-          scene.register(
-            line({
-              from: xy(pos, row.y - 0.16),
-              to: xy(pos, row.y + 0.16),
-              style: { stroke: "#38bdf8", lineWidth: 0.025 },
-            }),
-          );
-        }
-      }
+      scene.registerReactive(
+        derived([expSig, countSig], () => scalePlaygroundObject(expSig.get(), countSig.get())),
+      );
     });
+    return { expSig, countSig, program };
+  }, []);
 
-    return { program, rows };
-  }, [tickCount, exponent]);
+  useEffect(() => {
+    expSig.set(exponent);
+  }, [expSig, exponent]);
+  useEffect(() => {
+    countSig.set(tickCount);
+  }, [countSig, tickCount]);
+
+  const rows = useMemo(() => computeScaleRows(exponent, tickCount), [exponent, tickCount]);
 
   return (
     <div style={{ display: "flex", gap: 12, height: "100%" }}>
@@ -95,7 +113,7 @@ export function ScalePlaygroundDemo() {
         ))}
       </div>
       <div style={{ flex: 1 }}>
-        <IntermactCanvas program={program} autoplay />
+        <DemoCanvas program={program} autoplay />
       </div>
     </div>
   );

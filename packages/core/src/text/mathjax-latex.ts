@@ -7,10 +7,7 @@
  */
 import { type RawContour } from "../geometry/sampling";
 import { type LatexObjectProps, type LatexToken } from "./latex";
-import {
-  type PlacedGlyph,
-  transformContour,
-} from "./text-layout";
+import { type PlacedGlyph, transformContour } from "./text-layout";
 import { parseSvgPath } from "./svg-path";
 
 interface ExtractedPath {
@@ -22,9 +19,8 @@ interface ExtractedPath {
   readonly text: string;
 }
 
-interface MathJaxLiteNode {
-  // Opaque lite-adaptor element; only passed back to innerHTML.
-}
+/** Opaque lite-adaptor element; only passed back to innerHTML. */
+type MathJaxLiteNode = unknown;
 
 interface MathJaxContext {
   convert(tex: string, display: boolean): MathJaxLiteNode;
@@ -63,15 +59,53 @@ async function getMathJax(): Promise<MathJaxContext> {
   return mjInit;
 }
 
-/** Walk MathJax SVG markup and collect path `d` strings with cumulative transforms. */
+/** Build a closed rectangular path `d` for MathJax `<rect>` rules (e.g. `\frac` bar). */
+function rectToPathD(x: number, y: number, width: number, height: number): string {
+  return `M${x} ${y}H${x + width}V${y + height}H${x}Z`;
+}
+
+/** Walk MathJax SVG markup and collect filled shapes with cumulative transforms. */
 function extractMathJaxPaths(svgHtml: string): ExtractedPath[] {
   const results: ExtractedPath[] = [];
-  const stack: Array<{ tx: number; ty: number; flipY: boolean }> = [
-    { tx: 0, ty: 0, flipY: false },
-  ];
-  const tagRe = /<\/?g\b[^>]*>|<path\b[^>]*\/?>/g;
+  const stack: Array<{ tx: number; ty: number; flipY: boolean }> = [{ tx: 0, ty: 0, flipY: false }];
+  const tagRe = /<\/?g\b[^>]*>|<path\b[^>]*\/?>|<rect\b[^>]*\/?>/g;
   let m: RegExpExecArray | null;
   let pathIndex = 0;
+
+  const pushGroup = (tag: string): void => {
+    let tx = 0;
+    let ty = 0;
+    let flipY = false;
+    const tr = /transform="([^"]+)"/.exec(tag);
+    if (tr) {
+      const body = tr[1]!;
+      if (/scale\s*\(\s*1\s*,\s*-1\s*\)/.test(body)) flipY = true;
+      const transl = /translate\s*\(\s*([\d.-]+)\s*(?:,\s*([\d.-]+))?\s*\)/.exec(body);
+      if (transl) {
+        tx = parseFloat(transl[1]!);
+        ty = parseFloat(transl[2] ?? "0");
+      }
+    }
+    const top = stack[stack.length - 1]!;
+    stack.push({
+      tx: top.tx + tx,
+      ty: top.ty + ty,
+      flipY: top.flipY !== flipY ? !top.flipY : top.flipY,
+    });
+  };
+
+  const pushShape = (d: string, key: string, text: string): void => {
+    const top = stack[stack.length - 1]!;
+    results.push({
+      d,
+      tx: top.tx,
+      ty: top.ty,
+      flipY: top.flipY,
+      key,
+      text,
+    });
+    pathIndex++;
+  };
 
   while ((m = tagRe.exec(svgHtml)) !== null) {
     const tag = m[0]!;
@@ -80,25 +114,7 @@ function extractMathJaxPaths(svgHtml: string): ExtractedPath[] {
       continue;
     }
     if (tag.startsWith("<g")) {
-      let tx = 0;
-      let ty = 0;
-      let flipY = false;
-      const tr = /transform="([^"]+)"/.exec(tag);
-      if (tr) {
-        const body = tr[1]!;
-        if (/scale\s*\(\s*1\s*,\s*-1\s*\)/.test(body)) flipY = true;
-        const transl = /translate\s*\(\s*([\d.]+)\s*(?:,\s*([\d.-]+))?\s*\)/.exec(body);
-        if (transl) {
-          tx = parseFloat(transl[1]!);
-          ty = parseFloat(transl[2] ?? "0");
-        }
-      }
-      const top = stack[stack.length - 1]!;
-      stack.push({
-        tx: top.tx + tx,
-        ty: top.ty + ty,
-        flipY: top.flipY !== flipY ? !top.flipY : top.flipY,
-      });
+      pushGroup(tag);
       continue;
     }
     if (tag.startsWith("<path")) {
@@ -107,16 +123,16 @@ function extractMathJaxPaths(svgHtml: string): ExtractedPath[] {
       const dataC = /data-c="([^"]+)"/.exec(tag)?.[1];
       const text = dataC ? String.fromCodePoint(parseInt(dataC, 16)) : `·`;
       const key = dataC ? text : `mj@${pathIndex}`;
-      const top = stack[stack.length - 1]!;
-      results.push({
-        d,
-        tx: top.tx,
-        ty: top.ty,
-        flipY: top.flipY,
-        key,
-        text,
-      });
-      pathIndex++;
+      pushShape(d, key, text);
+      continue;
+    }
+    if (tag.startsWith("<rect")) {
+      const x = parseFloat(/x="([^"]+)"/.exec(tag)?.[1] ?? "0");
+      const y = parseFloat(/y="([^"]+)"/.exec(tag)?.[1] ?? "0");
+      const width = parseFloat(/width="([^"]+)"/.exec(tag)?.[1] ?? "0");
+      const height = parseFloat(/height="([^"]+)"/.exec(tag)?.[1] ?? "0");
+      if (width <= 0 || height <= 0) continue;
+      pushShape(rectToPathD(x, y, width, height), `frac@${pathIndex}`, "⁄");
     }
   }
   return results;
@@ -164,7 +180,8 @@ export async function layoutMathJaxLatex(
     let contours = parseSvgPath(p.d, { flipY: p.flipY });
     contours = contours.map((c) => transformContour(c, 1, 1, p.tx, p.ty));
     const tokenKey = partKey({ value: p.key, role: "base" });
-    const uniqueKey = paths.filter((x) => x.key === p.key).length > 1 ? `${tokenKey}@${i}` : tokenKey;
+    const uniqueKey =
+      paths.filter((x) => x.key === p.key).length > 1 ? `${tokenKey}@${i}` : tokenKey;
     entries.push({ key: uniqueKey, text: p.text, contours });
   }
 

@@ -11,7 +11,7 @@ import {
   tangentLine,
   xy,
 } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * M8 / design.md §7.4: an explorable derivative. Drag the Leva slider to move
@@ -75,9 +75,9 @@ export function TangentDerivativeDemo() {
 
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} autoplay />
+      <DemoCanvas program={program} autoplay />
       <p style={{ color: "#94a3b8", fontSize: 13, margin: "8px 0 0" }}>
-        f(x) = 2·sin(x); the readout shows f�?x) = 2·cos(x) at the moving point.
+        f(x) = 2·sin(x); the readout shows f�?x) = 2·cos(x) at the moving point.
       </p>
     </div>
   );

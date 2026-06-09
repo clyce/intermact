@@ -1,4 +1,5 @@
 import { type IMObject2D } from "../object/types";
+import { type ResolvedTransform2D } from "../runtime/state";
 import { type RuntimeStateStore } from "../runtime/store";
 import { type ReactiveObjectSource } from "./derived";
 import { getSignalId, type ReadonlySignal, type Signal, type SignalId } from "./signal";
@@ -6,6 +7,11 @@ import { getSignalId, type ReadonlySignal, type Signal, type SignalId } from "./
 /** Minimal scene surface required by the reactive flush pass. */
 export interface ReactiveSceneHost {
   replaceObject(id: string, object: IMObject2D): void;
+  /**
+   * Read the authoring transform for an object (used to sync `addUpdater` +
+   * `setTransform` into runtime state — design.md §8.2).
+   */
+  getAuthoringTransform?(id: string): ResolvedTransform2D | undefined;
 }
 
 /** Context passed to object updaters (design.md §8.2). */
@@ -35,6 +41,8 @@ export class ReactiveEngine {
   private readonly derived = new Map<string, DerivedEntry>();
   private readonly updaters = new Map<string, UpdaterEntry[]>();
   private readonly depVersions = new Map<SignalId, number>();
+  /** Monotonic per-object versions; survives Player `applyAt` store resets. */
+  private readonly derivedGeometryVersions = new Map<string, number>();
 
   /** Register a signal for tweenSignal timeline tracks. */
   registerSignal<T>(sig: Signal<T>): void {
@@ -66,6 +74,7 @@ export class ReactiveEngine {
   unregisterObject(targetId: string): void {
     this.derived.delete(targetId);
     this.updaters.delete(targetId);
+    this.derivedGeometryVersions.delete(targetId);
   }
 
   /** Release all tracked signals, derived sources, and updaters. */
@@ -74,6 +83,7 @@ export class ReactiveEngine {
     this.derived.clear();
     this.updaters.clear();
     this.depVersions.clear();
+    this.derivedGeometryVersions.clear();
   }
 
   /** Attach a per-frame updater to a registered object; returns an unsubscribe. */
@@ -100,6 +110,15 @@ export class ReactiveEngine {
       for (const entry of list) entry.fn(ctx);
     }
 
+    if (scene.getAuthoringTransform) {
+      for (const [id] of this.updaters) {
+        const transform = scene.getAuthoringTransform(id);
+        if (transform) {
+          store.applyPatch({ targetId: id, changes: { transform } });
+        }
+      }
+    }
+
     for (const [id, entry] of this.derived) {
       const versions = entry.deps.map((dep) => this.depVersions.get(getSignalId(dep)) ?? 0);
       const changed = versions.some((v, i) => v !== entry.lastVersions[i]);
@@ -109,13 +128,12 @@ export class ReactiveEngine {
       scene.replaceObject(id, next);
       entry.lastObject = next;
       entry.lastVersions = versions;
-      const state = store.get(id);
-      if (state) {
-        store.applyPatch({
-          targetId: id,
-          changes: { geometryVersion: state.geometryVersion + 1 },
-        });
-      }
+      const geometryVersion = (this.derivedGeometryVersions.get(id) ?? 0) + 1;
+      this.derivedGeometryVersions.set(id, geometryVersion);
+      store.applyPatch({
+        targetId: id,
+        changes: { geometryVersion },
+      });
     }
   }
 

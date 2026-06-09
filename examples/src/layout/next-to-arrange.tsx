@@ -1,5 +1,5 @@
 import { createProgram, rectangle, textObject, uv, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * M12 / design.md §9.4: relative layout. The title is pinned with `alignTo`, the
@@ -64,7 +64,7 @@ const program = createProgram(async (ctx) => {
 export function NextToArrangeDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} controls={{ timeline: true }} />
+      <DemoCanvas program={program} controls={{ timeline: true }} />
     </div>
   );
 }

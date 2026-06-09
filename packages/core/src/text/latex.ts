@@ -35,8 +35,7 @@ export function latexObjectFromGlyphs(
   props: Omit<LatexObjectProps, "tex">,
 ): IMObject2D {
   const origin = props.origin ?? xy(0, 0);
-  const alignOffset =
-    props.align === "center" ? -width / 2 : props.align === "right" ? -width : 0;
+  const alignOffset = props.align === "center" ? -width / 2 : props.align === "right" ? -width : 0;
   const shifted = shiftGlyphs(glyphs, origin[0] + alignOffset, origin[1]);
   return composeGlyphs(shifted, "latex", resolveGlyphStyle(props), props);
 }

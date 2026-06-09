@@ -10,11 +10,11 @@ import {
   xy,
   type AbsXY,
 } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * M11 / design.md Â§12.3: an explorable. Drag the handle along the curve to move
- * `x`; the tangent line and the slope readout recompute live (drag â†?signal â†? * derived geometry). Combines M8 constructs with M11 interaction.
+ * `x`; the tangent line and the slope readout recompute live (drag ï¿½?signal ï¿½? * derived geometry). Combines M8 constructs with M11 interaction.
  */
 const fn = (x: number) => 0.35 * x * x * x - 1.2 * x;
 
@@ -63,7 +63,7 @@ const program = createProgram(async (ctx) => {
 export function ExplorableDerivativeDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} controls={{ timeline: true }} />
+      <DemoCanvas program={program} controls={{ timeline: true }} />
     </div>
   );
 }

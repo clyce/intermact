@@ -7,7 +7,7 @@ import {
   toAnimation,
   xy,
 } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /** Build a star polygon (alternating outer/inner radius). */
 function star(points: number, outer: number, inner: number): AbsXY[] {
@@ -127,7 +127,7 @@ const program = createProgram(async (ctx) => {
 export function StrokeFillShowcaseDemo() {
   return (
     <div style={{ position: "absolute", inset: 0 }}>
-      <IntermactCanvas program={program} controls={{ timeline: true }} autoplay />
+      <DemoCanvas program={program} controls={{ timeline: true }} autoplay />
     </div>
   );
 }

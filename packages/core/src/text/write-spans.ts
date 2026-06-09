@@ -43,11 +43,9 @@ export function computeGlyphRevealSpans(
 export function isGlyphWriteComplete(
   revealEnd: number,
   fillProgress: number,
-  spans?: readonly GlyphRevealSpan[],
+  _spans?: readonly GlyphRevealSpan[],
 ): boolean {
-  return (
-    revealEnd >= 1 - GLYPH_WRITE_COMPLETE_EPS && fillProgress >= 1 - GLYPH_WRITE_COMPLETE_EPS
-  );
+  return revealEnd >= 1 - GLYPH_WRITE_COMPLETE_EPS && fillProgress >= 1 - GLYPH_WRITE_COMPLETE_EPS;
 }
 
 /** Map a global reveal value to a glyph-local [0,1] progress. */

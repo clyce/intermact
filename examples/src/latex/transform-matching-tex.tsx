@@ -1,6 +1,5 @@
 import { createProgram, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
-import { exampleAssetFetch, exampleAssetFetchBinary } from "../lib/assetFetch";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * MathJax serif LaTeX: write on the Pythagorean identity, then morph to `c^2`
@@ -45,13 +44,7 @@ const program = createProgram(async (ctx) => {
 export function TransformMatchingTexDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas
-        program={program}
-        autoplay
-        controls={{ timeline: true }}
-        fetcher={exampleAssetFetch}
-        fetchBinary={exampleAssetFetchBinary}
-      />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }

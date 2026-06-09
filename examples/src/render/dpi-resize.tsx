@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { circle, createProgram, line, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * `examples/render/dpi-resize` (dev-roadmap.md M3).
@@ -81,7 +81,7 @@ export function DpiResizeDemo() {
           resize: "both",
         }}
       >
-        <IntermactCanvas program={program} autoplay={false} />
+        <DemoCanvas program={program} autoplay={false} />
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { circle, createProgram, parallel, sequence, stagger, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /** M4: sequence / parallel / stagger orchestration. */
 const program = createProgram(async (ctx) => {
@@ -35,7 +35,7 @@ const program = createProgram(async (ctx) => {
 export function SequenceParallelStaggerDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }

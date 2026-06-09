@@ -1,5 +1,5 @@
 import { circle, createProgram, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * `examples/render/zorder-transparency` (dev-roadmap.md M3).
@@ -49,7 +49,7 @@ const program = createProgram(async (ctx) => {
 export function ZOrderTransparencyDemo() {
   return (
     <div style={{ position: "absolute", inset: 0 }}>
-      <IntermactCanvas program={program} controls={{ timeline: true }} autoplay />
+      <DemoCanvas program={program} controls={{ timeline: true }} autoplay />
     </div>
   );
 }

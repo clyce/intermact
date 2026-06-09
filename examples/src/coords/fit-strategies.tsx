@@ -1,5 +1,5 @@
 import { circle, createProgram } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 import { useMemo, useState } from "react";
 
 /** M5: compare contain / cover / stretch fit strategies. */
@@ -40,7 +40,7 @@ export function FitStrategiesDemo() {
         ))}
       </div>
       <div style={{ height: 320, resize: "both", overflow: "hidden", border: "1px solid #334155" }}>
-        <IntermactCanvas program={program} autoplay style={{ height: "100%" }} />
+        <DemoCanvas program={program} autoplay style={{ height: "100%" }} />
       </div>
       <p style={{ color: "#94a3b8", fontSize: 14 }}>
         Resize the box — the circle stays a true circle under <code>contain</code> (default).

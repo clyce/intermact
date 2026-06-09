@@ -8,9 +8,8 @@ const require = createRequire(import.meta.url);
 /** Load DejaVu Sans for vitest (registers + sets default). */
 export async function loadTestFont(): Promise<string> {
   clearFontRegistry();
-  const fontPath = require.resolve(
-    "@fontsource/dejavu-sans/files/dejavu-sans-latin-400-normal.woff",
-  );
+  const fontPath =
+    require.resolve("@fontsource/dejavu-sans/files/dejavu-sans-latin-400-normal.woff");
   const assets = createAssetManager({
     fetchBinary: async (src) => {
       const b = readFileSync(src);

@@ -1,5 +1,5 @@
 import { createProgram, functionGraph, parametricGraph } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * M8 / design.md §7.4: Axes + FunctionGraph, verifying `c2p` keeps the curve
@@ -38,7 +38,7 @@ const program = createProgram(async (ctx) => {
 export function AxesFunctionGraphDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }

@@ -10,7 +10,7 @@ import {
   rectangle,
   xy,
 } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 import { geometryPreviewProgram } from "../lib/geometryPreviewProgram";
 
 /**
@@ -107,7 +107,7 @@ export function PrimitivesGalleryDemo() {
         {items.map((it) => (
           <figure key={it.title} style={{ margin: 0 }}>
             <div style={{ height: 220, borderRadius: 8, overflow: "hidden" }}>
-              <IntermactCanvas program={geometryPreviewProgram(it.object)} />
+              <DemoCanvas program={geometryPreviewProgram(it.object)} />
             </div>
             <figcaption style={{ color: "#cbd5e1", fontSize: 13, marginTop: 6 }}>
               {it.title}

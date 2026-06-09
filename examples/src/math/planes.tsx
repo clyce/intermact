@@ -6,13 +6,13 @@ import {
   polarPlane,
   xy,
 } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * M8 / design.md Â§7.4: coordinate planes. A cartesian {@link numberPlane}
  * (left) and a {@link polarPlane} (right). ComplexPlane shares the cartesian
  * grid with Re/Im semantics. A rose curve is drawn on the polar grid via
- * `parametricGraph` to show data â†?world placement.
+ * `parametricGraph` to show data ï¿½?world placement.
  */
 const program = createProgram(async (ctx) => {
   const scene = ctx.createScene2D({
@@ -56,7 +56,7 @@ const program = createProgram(async (ctx) => {
 export function PlanesDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { circle, createProgram, xy } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * `examples/timeline/seek-basics` (dev-roadmap.md M1).
@@ -25,7 +25,7 @@ const program = createProgram(async (ctx) => {
 export function SeekBasicsDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} controls={{ timeline: true }} />
+      <DemoCanvas program={program} controls={{ timeline: true }} />
     </div>
   );
 }

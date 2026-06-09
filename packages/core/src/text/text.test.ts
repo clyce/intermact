@@ -65,8 +65,8 @@ describe("outline fonts (OpenType)", () => {
 
   it("produces separated glyph advances (not stacked)", () => {
     const a = glyphFor("A");
-    const v = glyphFor("V");
     expect(a.advance).toBeGreaterThan(0.1);
+    expect(glyphFor("V").advance).toBeGreaterThan(0.1);
     const placed = textObject({ text: "AV", font: undefined, size: 1, fill: "#fff" });
     const b = placed.geometry.getBounds();
     expect(b.size[0]).toBeGreaterThan(a.advance * 0.8);
@@ -126,6 +126,16 @@ describe("MathJax LaTeX engine", () => {
     const { glyphs, width } = await layoutMathJaxLatex(String.raw`E=mc^2`, { size: 1 });
     expect(glyphs.length).toBeGreaterThan(2);
     expect(width).toBeGreaterThan(0.5);
+  });
+
+  it("includes fraction bar geometry from MathJax rect rules", async () => {
+    const { glyphs } = await layoutMathJaxLatex(String.raw`\frac{1}{3}`, { size: 1 });
+    const hasFracBar = glyphs.some((g) => g.key.startsWith("frac@"));
+    expect(hasFracBar).toBe(true);
+    const bar = glyphs.find((g) => g.key.startsWith("frac@"))!;
+    expect(bar.contours.length).toBeGreaterThan(0);
+    const xs = bar.contours[0]!.points.filter((_, i) => i % 2 === 0);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(0.1);
   });
 
   it("keys tokens for transformMatching across formulas", async () => {
@@ -190,7 +200,10 @@ describe("AssetManager prepare stage (M10 / §14)", () => {
           strokeWidth: 0.025,
         }),
       ];
-      const writeOpts = { duration: 2.2, stroke: { direction: "ltr" as const, glyphOverlap: 0.12 } };
+      const writeOpts = {
+        duration: 2.2,
+        stroke: { direction: "ltr" as const, glyphOverlap: 0.12 },
+      };
       for (const obj of lines) {
         const reg = scene.register(obj);
         ids.push(reg.id);

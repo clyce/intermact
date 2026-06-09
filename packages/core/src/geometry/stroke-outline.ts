@@ -90,13 +90,7 @@ function orient(points: Pt[], ccw: boolean): Pt[] {
  * using a miter join of the incoming/outgoing segment normals. `prev`/`next`
  * may be null at the open ends of a path (single-segment normal then).
  */
-function offsetVertex(
-  prev: Pt | null,
-  cur: Pt,
-  next: Pt | null,
-  side: number,
-  half: number,
-): Pt {
+function offsetVertex(prev: Pt | null, cur: Pt, next: Pt | null, side: number, half: number): Pt {
   const dIn = prev ? unit(cur[0] - prev[0], cur[1] - prev[1]) : null;
   const dOut = next ? unit(next[0] - cur[0], next[1] - cur[1]) : null;
   const nIn = dIn ? leftNormal(dIn) : null;

@@ -276,9 +276,9 @@ export const demos: readonly DemoEntry[] = [
     "morph",
     MatchingShapesDemo,
     <>
-      <strong>transformMatching</strong> on composite groups. Parts pair by key: <code>a</code> morphs
-      circle → square, <code>keep</code> holds, source-only <code>b</code> collapses, target-only{" "}
-      <code>c</code> grows in.
+      <strong>transformMatching</strong> on composite groups. Parts pair by key: <code>a</code>{" "}
+      morphs circle → square, <code>keep</code> holds, source-only <code>b</code> collapses,
+      target-only <code>c</code> grows in.
     </>,
   ),
   entry(
@@ -287,8 +287,8 @@ export const demos: readonly DemoEntry[] = [
     "text",
     TextWritingDemo,
     <>
-      <strong>write()</strong> draws each glyph&apos;s outline on (like Manim Write / DrawBorderThenFill),
-      then flows the fill in. Scrub to draw/undraw.
+      <strong>write()</strong> draws each glyph&apos;s outline on (like Manim Write /
+      DrawBorderThenFill), then flows the fill in. Scrub to draw/undraw.
     </>,
   ),
   entry(
@@ -297,9 +297,10 @@ export const demos: readonly DemoEntry[] = [
     "text",
     WritingStrategiesDemo,
     <>
-      Top: <strong>direction: &quot;simultaneous&quot;</strong> — all glyphs share one reveal window.
-      Bottom: <strong>direction: &quot;ltr&quot;</strong> with <strong>glyphOverlap: 0.25</strong> — each
-      glyph starts before the previous finishes. Scrub to compare.
+      Top: <strong>direction: &quot;simultaneous&quot;</strong> — all glyphs share one reveal
+      window. Bottom: <strong>direction: &quot;ltr&quot;</strong> with{" "}
+      <strong>glyphOverlap: 0.25</strong> — each glyph starts before the previous finishes. Scrub to
+      compare.
     </>,
   ),
   entry(
@@ -308,8 +309,8 @@ export const demos: readonly DemoEntry[] = [
     "text",
     FontScaleDemo,
     <>
-      Glyphs are constant-width <strong>outline</strong> contours: solid fill, hollow stroke, or both
-      with separate colors. Vector geometry stays crisp at any scale.
+      Glyphs are constant-width <strong>outline</strong> contours: solid fill, hollow stroke, or
+      both with separate colors. Vector geometry stays crisp at any scale.
     </>,
     "bottom",
   ),
@@ -320,7 +321,8 @@ export const demos: readonly DemoEntry[] = [
     MultiFontWritingDemo,
     <>
       Built-in stroke skeleton vs custom <strong>OpenType</strong> outlines (DejaVu Sans / Serif).
-      Outline fonts use filled paths — no V-tip spikes — with the same <strong>write()</strong> reveal.
+      Outline fonts use filled paths — no V-tip spikes — with the same <strong>write()</strong>{" "}
+      reveal.
     </>,
   ),
   entry(

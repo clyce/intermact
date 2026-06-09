@@ -9,7 +9,7 @@ import {
   xy,
   type AbsXY,
 } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /**
  * M11 / design.md §12.1: hit-testing thin strokes via pick proxies. Each spoke
@@ -62,7 +62,7 @@ const program = createProgram(async (ctx) => {
 export function HitTestingDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} />
+      <DemoCanvas program={program} />
     </div>
   );
 }

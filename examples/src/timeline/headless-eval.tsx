@@ -57,7 +57,14 @@ export function HeadlessEvalDemo() {
   }, []);
 
   return (
-    <div style={{ padding: "48px 24px 24px", overflow: "auto", height: "100%", boxSizing: "border-box" }}>
+    <div
+      style={{
+        padding: "48px 24px 24px",
+        overflow: "auto",
+        height: "100%",
+        boxSizing: "border-box",
+      }}
+    >
       <p style={{ color: "#94a3b8", maxWidth: 680, marginTop: 0 }}>
         Total storyboard duration: {duration.toFixed(2)}s.
       </p>

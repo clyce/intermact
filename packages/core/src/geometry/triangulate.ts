@@ -68,7 +68,10 @@ function ensureWinding(points: Float32Array, wantPositive: boolean): Float32Arra
  * Classify closed rings in one glyph group: largest containing rings are solids
  * (CCW), nested smaller rings become holes (CW). Disjoint solids are allowed.
  */
-function classifyFillGroup(contours: readonly SampledContour2D[]): { solids: Ring[]; holesBySolid: Map<number, Ring[]> } {
+function classifyFillGroup(contours: readonly SampledContour2D[]): {
+  solids: Ring[];
+  holesBySolid: Map<number, Ring[]>;
+} {
   const rings: Array<Ring & { index: number }> = [];
   contours.forEach((c, index) => {
     if (c.points.length >= 6) rings.push({ points: c.points, area: signedArea(c.points), index });
@@ -121,7 +124,10 @@ function classifyFillGroup(contours: readonly SampledContour2D[]): { solids: Rin
   return { solids, holesBySolid };
 }
 
-function triangulateRings(solids: readonly Ring[], holesBySolid: ReadonlyMap<number, Ring[]>): Triangulation {
+function triangulateRings(
+  solids: readonly Ring[],
+  holesBySolid: ReadonlyMap<number, Ring[]>,
+): Triangulation {
   const verts: number[] = [];
   const indices: number[] = [];
   solids.forEach((solid, si) => {

@@ -1,5 +1,5 @@
 import { circle, createProgram, derived, polyline, polygon, tweenSignal } from "@intermact/core";
-import { IntermactCanvas } from "@intermact/react";
+import { DemoCanvas } from "../lib/DemoCanvas";
 
 /** M6 / design.md §8.2: tweenSignal drives a derived rectangle under a hyperbola. */
 const program = createProgram(async (ctx) => {
@@ -29,11 +29,13 @@ const program = createProgram(async (ctx) => {
     derived([t], () => {
       const x = t.get();
       const y = k / x;
-      const p0 = ax.handle.c2p([x, 0]);
-      const p1 = ax.handle.c2p([x, y]);
-      const p2 = ax.handle.c2p([0, y]);
       return polygon({
-        points: [p0, p1, p2],
+        points: [
+          ax.handle.c2p([x, 0]),
+          ax.handle.c2p([x, y]),
+          ax.handle.c2p([0, y]),
+          ax.handle.c2p([0, 0]),
+        ],
         closed: true,
         style: { fill: "rgba(59,130,246,0.45)", stroke: "#60a5fa", lineWidth: 0.025 },
       });
@@ -52,7 +54,7 @@ const program = createProgram(async (ctx) => {
 export function ValueTrackerDemo() {
   return (
     <div style={{ height: "100%" }}>
-      <IntermactCanvas program={program} autoplay controls={{ timeline: true }} />
+      <DemoCanvas program={program} autoplay controls={{ timeline: true }} />
     </div>
   );
 }
