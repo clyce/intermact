@@ -32,6 +32,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # build:site builds packages internally (TypeDoc needs dist/*.d.ts on clean checkouts).
       - name: Bake static site
         run: pnpm run build:site
         env:
