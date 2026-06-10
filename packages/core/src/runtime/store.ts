@@ -1,20 +1,31 @@
-import { applyPatch2D, type RuntimeState2D, type StatePatch } from "./state";
+import { assertNever } from "../errors";
+import {
+  applyPatch2D,
+  applyPatch3D,
+  type RuntimeState,
+  type RuntimeState2DPatch,
+  type RuntimeState3DPatch,
+  type StatePatch,
+} from "./state";
 
 /**
  * Immutable runtime-state store keyed by object id. Each `applyPatch` produces
  * a new state value for the target while leaving others referentially stable,
  * so renderers can diff cheaply by identity (design.md §4.3, §15.2).
+ *
+ * The store holds the {@link RuntimeState} union (2D | 3D) and dispatches the
+ * correct patch application by the stored state's `dimension` discriminator.
  */
 export class RuntimeStateStore {
-  private states = new Map<string, RuntimeState2D>();
+  private states = new Map<string, RuntimeState>();
 
   /** Seed an object's baseline state. */
-  set(id: string, state: RuntimeState2D): void {
+  set(id: string, state: RuntimeState): void {
     this.states.set(id, state);
   }
 
   /** Read current state for an object, if registered. */
-  get(id: string): RuntimeState2D | undefined {
+  get(id: string): RuntimeState | undefined {
     return this.states.get(id);
   }
 
@@ -22,11 +33,26 @@ export class RuntimeStateStore {
   applyPatch(patch: StatePatch): void {
     const current = this.states.get(patch.targetId);
     if (!current) return;
-    this.states.set(patch.targetId, applyPatch2D(current, patch.changes));
+    switch (current.dimension) {
+      case "2d":
+        this.states.set(
+          patch.targetId,
+          applyPatch2D(current, patch.changes as RuntimeState2DPatch),
+        );
+        return;
+      case "3d":
+        this.states.set(
+          patch.targetId,
+          applyPatch3D(current, patch.changes as RuntimeState3DPatch),
+        );
+        return;
+      default:
+        assertNever(current, "Unhandled runtime-state dimension in applyPatch.");
+    }
   }
 
   /** Snapshot of all states as a readonly map. */
-  entries(): ReadonlyMap<string, RuntimeState2D> {
+  entries(): ReadonlyMap<string, RuntimeState> {
     return this.states;
   }
 
@@ -38,7 +64,7 @@ export class RuntimeStateStore {
   }
 
   /** Reset to a baseline set of states (replaces all entries). */
-  resetTo(baseline: ReadonlyMap<string, RuntimeState2D>): void {
+  resetTo(baseline: ReadonlyMap<string, RuntimeState>): void {
     this.states = new Map(baseline);
   }
 }

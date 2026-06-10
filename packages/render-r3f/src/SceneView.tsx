@@ -16,6 +16,7 @@ import {
 import { ThreeSceneView } from "@intermact/render-three";
 import { computeFit } from "./fit";
 import { collectHitEntries, interactiveTraitOf } from "./interaction";
+import { HostRenderedScenePanel } from "./RenderedScene";
 
 /**
  * In-canvas R3F component (design.md §15). Hosts a framework-free
@@ -43,6 +44,16 @@ export function SceneView({
   const size = useThree((s) => s.size);
   const view = useMemo(() => new ThreeSceneView(), []);
   const worldPerPixel = useRef(1);
+
+  // Embedded sub-scenes composed via core `render()` are registered objects that
+  // the snapshot diff skips; composite each as an offscreen panel (design.md §10.2).
+  const renderedScenePanelIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const [id, rs] of player.getSnapshot().objects) {
+      if (rs.object.type === "rendered-scene") ids.push(id);
+    }
+    return ids;
+  }, [player]);
 
   const domainKey = `${domain.x[0]},${domain.x[1]},${domain.y[0]},${domain.y[1]}`;
   useEffect(() => {
@@ -141,5 +152,12 @@ export function SceneView({
     onFrame?.(snapshot);
   });
 
-  return <primitive object={view.root} />;
+  return (
+    <>
+      <primitive object={view.root} />
+      {renderedScenePanelIds.map((id) => (
+        <HostRenderedScenePanel key={id} hostPlayer={player} objectId={id} />
+      ))}
+    </>
+  );
 }

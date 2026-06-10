@@ -68,6 +68,11 @@ export interface CircleProps {
   readonly metadata?: ObjectMetadata;
 }
 
+/**
+ * Build a filled, morphable circle approximated by `samples` evenly-spaced
+ * points (default 64) around `center` (design.md §5.1). Higher `samples` give
+ * smoother strokes and finer morph correspondence at the cost of vertices.
+ */
 export function circle(props: CircleProps): IMObject2D {
   const c = props.center ?? xy(0, 0);
   const pts = sampleClosedEllipse(
@@ -96,6 +101,10 @@ export interface EllipseProps {
   readonly metadata?: ObjectMetadata;
 }
 
+/**
+ * Build a filled, morphable axis-aligned ellipse with semi-axes `rx`/`ry`,
+ * approximated by `samples` points (default 64) around `center` (design.md §5.1).
+ */
 export function ellipse(props: EllipseProps): IMObject2D {
   const c = props.center ?? xy(0, 0);
   const pts = sampleClosedEllipse(c[0], c[1], props.rx, props.ry, props.samples ?? DEFAULT_SAMPLES);
@@ -119,6 +128,12 @@ export interface RectangleProps {
   readonly metadata?: ObjectMetadata;
 }
 
+/**
+ * Build a filled, morphable rectangle of `width`×`height` centered at `center`
+ * (design.md §5.1). A positive `cornerRadius` rounds the corners with arc
+ * segments (clamped to half the shorter side); `samples` controls corner
+ * smoothness.
+ */
 export function rectangle(props: RectangleProps): IMObject2D {
   const c = props.center ?? xy(0, 0);
   const hw = props.width / 2;
@@ -162,6 +177,11 @@ export interface ArcProps {
   readonly metadata?: ObjectMetadata;
 }
 
+/**
+ * Build a circular arc of `radius` from `startAngle` to `endAngle` (radians,
+ * CCW) around `center` (design.md §5.1). When `closed` is true the endpoints are
+ * chorded into a fillable, morphable wedge; otherwise it is an open stroke.
+ */
 export function arc(props: ArcProps): IMObject2D {
   const c = props.center ?? xy(0, 0);
   const pts = sampleArc(
@@ -191,6 +211,12 @@ export interface PolygonProps {
   readonly metadata?: ObjectMetadata;
 }
 
+/**
+ * Build a polygon from an explicit ordered point list (design.md §5.1). Each
+ * entry in `holes` becomes an inner contour subtracted via the even-odd/nonzero
+ * fill rule. A `closed` polygon (default) is fillable and morphable; an open one
+ * is a stroke-only path.
+ */
 export function polygon(props: PolygonProps): IMObject2D {
   const closed = props.closed ?? true;
   const contours: RawContour[] = [rawContourFromPoints(props.points, closed)];
@@ -212,6 +238,11 @@ export interface BezierCurveProps {
   readonly metadata?: ObjectMetadata;
 }
 
+/**
+ * Build an open Bézier path from control points (design.md §5.1): 3 points form
+ * a quadratic, 4 a cubic, and additional points chain further cubic segments.
+ * `stepsPerSegment` (default 32) sets the flattening resolution.
+ */
 export function bezierCurve(props: BezierCurveProps): IMObject2D {
   const pts = sampleBezier(props.points, props.stepsPerSegment ?? 32);
   return buildObject2D({
@@ -231,6 +262,7 @@ export interface LineProps {
   readonly metadata?: ObjectMetadata;
 }
 
+/** Build a straight stroke-only segment from `from` to `to` (design.md §5.1). */
 export function line(props: LineProps): IMObject2D {
   return buildObject2D({
     type: "line",
@@ -248,6 +280,7 @@ export interface PolylineProps {
   readonly metadata?: ObjectMetadata;
 }
 
+/** Build an open stroke-only polyline through an ordered point list (design.md §5.1). */
 export function polyline(props: PolylineProps): IMObject2D {
   return buildObject2D({
     type: "polyline",
@@ -271,6 +304,12 @@ export interface ArrowProps {
   readonly metadata?: ObjectMetadata;
 }
 
+/**
+ * Build an arrow from `from` to `to` (design.md §5.1): an open stroked shaft
+ * plus a filled isosceles triangular head whose base is perpendicular to and
+ * bisected by the shaft. `headLength` is clamped to 45% of the length;
+ * `headWidth` defaults to 90% of the head length.
+ */
 export function arrow(props: ArrowProps): IMObject2D {
   const dir = V2.normalize(V2.sub(props.to, props.from));
   const len = V2.distance(props.from, props.to);

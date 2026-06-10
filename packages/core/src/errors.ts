@@ -12,6 +12,8 @@ export type IntermactErrorCode =
   | "asset-load-error"
   | "non-seekable-side-effect"
   | "external-state-error"
+  | "serialization-error"
+  | "plugin-error"
   | "invalid-argument";
 
 /** Base error carrying a stable {@link IntermactErrorCode} and optional detail. */

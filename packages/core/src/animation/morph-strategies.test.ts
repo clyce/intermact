@@ -3,11 +3,13 @@ import { circle, createProgram, group2D, morph, polygon, transformMatching, xy }
 import { createRng } from "../random/rng";
 import { buildProgram } from "../program/build";
 import { type Player } from "./player";
+import { type RuntimeState2D } from "../runtime/state";
 import { buildMatchingFrames, buildMorphFrames, pairContours, normalizedContoursOf } from "./morph";
 
-function stateOf(player: Player, id: string) {
+function stateOf(player: Player, id: string): RuntimeState2D {
   const s = player.getSnapshot().objects.get(id)?.state;
   if (!s) throw new Error(`no state for ${id}`);
+  if (s.dimension !== "2d") throw new Error(`expected 2d state for ${id}`);
   return s;
 }
 

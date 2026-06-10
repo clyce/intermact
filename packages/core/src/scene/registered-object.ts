@@ -2,11 +2,14 @@ import { type AbsXY, type Vec2 } from "../math/vec";
 import {
   type Animation,
   type AnimationSpec,
+  buildFadeSpec,
+  buildTweenSpec,
   type Easing,
   type FillRevealSpec,
   morph,
   type MorphOptions,
   type PropertyPath,
+  type StrokeRevealMode,
   type StrokeRevealSpec,
   toAnimation,
   transformMatching,
@@ -40,6 +43,17 @@ export interface CreateOptions {
   readonly easing?: Easing;
   readonly stroke?: StrokeRevealSpec;
   readonly fill?: FillRevealSpec;
+}
+
+/**
+ * Options for axes `create()` — `parallel` draws every axis/tick at once;
+ * `sequential` reveals each axis then its tick+label clusters in order.
+ */
+export interface AxesCreateOptions extends Omit<CreateOptions, "stroke"> {
+  readonly mode?: Extract<StrokeRevealMode, "sequential" | "contour-parallel">;
+  /** Overlap between sequential groups (0 = strict order). */
+  readonly overlap?: number;
+  readonly stroke?: StrokeRevealSpec;
 }
 
 /**
@@ -99,22 +113,7 @@ export class RegisteredObject2D {
 
   /** Tween an addressable runtime property to a target value. */
   tween(property: PropertyPath, to: unknown, options?: TweenOptions): Animation {
-    const duration = options?.duration ?? DEFAULT_DURATION;
-    const tweenSpec: AnimationSpec = {
-      kind: "tween",
-      targetId: this.id,
-      property,
-      to,
-      duration,
-      ...(options?.easing !== undefined ? { easing: options.easing } : {}),
-    };
-    if (options?.delay && options.delay > 0) {
-      return toAnimation({
-        kind: "sequence",
-        children: [{ kind: "wait", duration: options.delay }, tweenSpec],
-      });
-    }
-    return toAnimation(tweenSpec);
+    return buildTweenSpec(this.id, property, to, options);
   }
 
   /** Tween world position. */
@@ -139,21 +138,7 @@ export class RegisteredObject2D {
 
   /** Fade in from invisible: baseline opacity 0 is applied when this is played (§11). */
   fadeIn(options?: TweenOptions): Animation {
-    const spec = {
-      kind: "fade" as const,
-      targetId: this.id,
-      from: 0,
-      to: 1,
-      duration: options?.duration ?? DEFAULT_DURATION,
-      ...(options?.easing !== undefined ? { easing: options.easing } : {}),
-    };
-    if (options?.delay && options.delay > 0) {
-      return toAnimation({
-        kind: "sequence",
-        children: [{ kind: "wait", duration: options.delay }, spec],
-      });
-    }
-    return toAnimation(spec);
+    return buildFadeSpec(this.id, 0, 1, options);
   }
 
   /** Fade out to invisible. */
@@ -231,4 +216,10 @@ export class RegisteredObject2D {
 /** Registered axes with a coordinate mapping handle (design.md §7.4). */
 export interface RegisteredAxes2D extends RegisteredObject2D {
   readonly handle: AxesHandle;
+  /**
+   * Draw axes on: `sequential` (default) reveals each axis and its tick+label
+   * clusters in order; `contour-parallel` (`mode: "contour-parallel"`) draws all
+   * at once.
+   */
+  create(options?: AxesCreateOptions): Animation;
 }

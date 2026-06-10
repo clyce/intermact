@@ -50,14 +50,16 @@ export function projectOrtho(
 export function collectHitEntries(snapshot: RenderSnapshot): HitEntry[] {
   const entries: HitEntry[] = [];
   for (const [id, render] of snapshot.objects) {
-    if (!render.state.visible) continue;
+    const state = render.state;
+    if (state.dimension !== "2d") continue;
+    if (!state.visible) continue;
     const trait = findTrait(render.object.traits, "interactive") as InteractiveTrait | undefined;
     if (!trait) continue;
     entries.push({
       id,
       proxy: trait.pick,
-      transform: render.state.transform,
-      zIndex: render.state.transform.zIndex,
+      transform: state.transform,
+      zIndex: state.transform.zIndex,
     });
   }
   return entries;

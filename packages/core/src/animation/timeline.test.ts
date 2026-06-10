@@ -8,6 +8,7 @@ import { type Player } from "./player";
 function positionOf(player: Player, id: string): readonly [number, number] {
   const state = player.getSnapshot().objects.get(id)?.state;
   if (!state) throw new Error(`no state for ${id}`);
+  if (state.dimension !== "2d") throw new Error(`expected 2d state for ${id}`);
   return state.transform.position;
 }
 

@@ -3,10 +3,12 @@ import { circle, createProgram, xy } from "../index";
 import { buildProgram } from "../program/build";
 import { parallel, sequence, stagger } from "./orchestration";
 import { type Player } from "./player";
+import { type RuntimeState2D } from "../runtime/state";
 
-function stateOf(player: Player, id: string) {
+function stateOf(player: Player, id: string): RuntimeState2D {
   const s = player.getSnapshot().objects.get(id)?.state;
   if (!s) throw new Error(`no state for ${id}`);
+  if (s.dimension !== "2d") throw new Error(`expected 2d state for ${id}`);
   return s;
 }
 
@@ -85,6 +87,32 @@ describe("basic animations (M4)", () => {
     const { player } = await buildProgram(program);
     player.seek(0);
     expect(stateOf(player, id).opacity).toBe(1);
+  });
+
+  it("fadeIn after earlier animations does not hide the object beforehand", async () => {
+    let id = "";
+    const program = createProgram(async (ctx) => {
+      const scene = ctx.createScene2D({
+        coordinate: "cartesian",
+        domain: { x: [-2, 2], y: [-2, 2] },
+      });
+      ctx.mount(scene, ctx.createCamera2D(scene));
+      const c = scene.register(circle({ radius: 1, style: { fill: "#fff" } }));
+      id = c.id;
+      await scene.play(c.create({ duration: 1 }));
+      await scene.wait(0.5);
+      await scene.play(c.fadeOut({ duration: 0.4 }));
+      await scene.wait(0.5);
+      await scene.play(c.fadeIn({ duration: 0.4 }));
+    });
+    const { player } = await buildProgram(program);
+    player.seek(0.5);
+    expect(stateOf(player, id).opacity).toBe(1);
+    expect(stateOf(player, id).revealEnd).toBeGreaterThan(0);
+    player.seek(1.9);
+    expect(stateOf(player, id).opacity).toBeCloseTo(0, 2);
+    player.seek(2.9);
+    expect(stateOf(player, id).opacity).toBeCloseTo(1, 1);
   });
 
   it("fadeIn starts from opacity 0", async () => {

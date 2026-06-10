@@ -9,6 +9,7 @@ import { glyphFor } from "./glyph-resolver";
 import { textObject } from "./text-layout";
 import { layoutMathJaxLatex } from "./mathjax-latex";
 import { buildMatchingFrames } from "../animation/morph";
+import { type RuntimeState2D } from "../runtime/state";
 import { computeGlyphRevealSpans, glyphLocalFill, glyphLocalReveal } from "./write-spans";
 import { triangulateGroups, triangulationArea } from "../geometry/triangulate";
 import { toSampledContour } from "../geometry/sampling";
@@ -227,7 +228,7 @@ describe("AssetManager prepare stage (M10 / §14)", () => {
     ids.forEach((id, i) => {
       const snap = player.getSnapshot().objects.get(id);
       expect(snap?.state.revealEnd).toBeCloseTo(1, 5);
-      expect(snap?.state.fillProgress).toBeCloseTo(1, 5);
+      expect((snap!.state as RuntimeState2D).fillProgress).toBeCloseTo(1, 5);
       const b = snap!.object.geometry.getBounds();
       expect(b.max[1]).toBeGreaterThan(origins[i]! + 0.08);
     });
@@ -258,7 +259,7 @@ describe("AssetManager prepare stage (M10 / §14)", () => {
     player.seek(2.2);
     const snap = player.getSnapshot().objects.get(sansId);
     expect(snap?.state.revealEnd).toBe(1);
-    expect(snap?.state.fillProgress).toBe(1);
+    expect((snap!.state as RuntimeState2D).fillProgress).toBe(1);
     const obj = snap?.object;
     expect(obj).toBeTruthy();
     const b = obj!.geometry.getBounds();
@@ -284,6 +285,6 @@ describe("AssetManager prepare stage (M10 / §14)", () => {
     player.seek(1);
     const snap = player.getSnapshot().objects.get(id);
     expect(snap).toBeTruthy();
-    expect(snap!.state.glyphWriteSpans?.length).toBeGreaterThan(0);
+    expect((snap!.state as RuntimeState2D).glyphWriteSpans?.length).toBeGreaterThan(0);
   });
 });

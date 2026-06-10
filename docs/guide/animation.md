@@ -36,9 +36,9 @@ await scene.play(
 );
 ```
 
-## Morph（arc-length）
+## Morph
 
-v0.1 提供弧长归一化插值兜底；完整 contour matching 在 M9。
+默认 **arc-length** 弧长归一化插值；v0.2 另提供 `anchor`、`matching`（分部 key 匹配）、`cross-fade` 兜底。详见 [Morph 与分部匹配](/guide/morph)。
 
 ```ts
 import { morph, rectangle } from "@intermact/core";
@@ -46,9 +46,12 @@ import { morph, rectangle } from "@intermact/core";
 await scene.play(
   morph(disk, rectangle({ width: 2, height: 1, style: { … } }), {
     duration: 1.2,
-    strategy: "arc-length",
+    strategy: "arc-length", // 或 "anchor" | "matching" | "cross-fade"
   }),
 );
+
+// 或 RegisteredObject2D 实例方法
+await scene.play(disk.morphTo(rectangle({ … }), { duration: 1.2 }));
 ```
 
 运行时通过 `geometryOverride` 插值采样轮廓，渲染器优先使用 override。

@@ -1,7 +1,14 @@
-import { type AbsXY, type Vec2, xy } from "../math/vec";
+import { type AbsXY, type Vec2, type Vec3, xy, xyz } from "../math/vec";
+import { QUAT_IDENTITY, quatMultiply, quatRotateVec3 } from "../math/quaternion";
 import { type Bounds2D } from "../object/geometry-provider";
-import { type Transform2D } from "../scene/transform";
-import { normalizeScale, type ResolvedTransform2D } from "./state";
+import { type Transform2D, type Transform3D } from "../scene/transform";
+import {
+  normalizeScale,
+  normalizeScale3,
+  resolveRotation3D,
+  type ResolvedTransform2D,
+  type ResolvedTransform3D,
+} from "./state";
 
 /**
  * World-transform algebra for the 2D transform hierarchy (design.md §9.3).
@@ -70,6 +77,54 @@ export function worldDeltaToLocal(t: ResolvedTransform2D, delta: AbsXY): AbsXY {
   const rx = cos * delta[0] - sin * delta[1];
   const ry = sin * delta[0] + cos * delta[1];
   return xy(rx / (t.scale[0] || 1), ry / (t.scale[1] || 1));
+}
+
+/** Identity 3D transform (root parent). */
+export const IDENTITY_TRANSFORM_3D: ResolvedTransform3D = {
+  position: xyz(0, 0, 0),
+  rotation: QUAT_IDENTITY,
+  scale: [1, 1, 1],
+  renderOrder: 0,
+};
+
+/** Normalize an authoring {@link Transform3D} into a fully resolved transform. */
+export function resolveTransform3D(t: Transform3D | undefined): ResolvedTransform3D {
+  return {
+    position: t?.position ?? xyz(0, 0, 0),
+    rotation: resolveRotation3D(t?.rotation),
+    scale: normalizeScale3(t?.scale),
+    renderOrder: t?.renderOrder ?? 0,
+  };
+}
+
+/**
+ * Compose a child's local 3D transform under its parent's world transform
+ * (TRS, no shear): `world(p) = parent.pos + parent.rot · (parent.scale * child)`.
+ */
+export function composeTransform3D(
+  parent: ResolvedTransform3D,
+  child: ResolvedTransform3D,
+): ResolvedTransform3D {
+  const scaled: Vec3 = [
+    parent.scale[0] * child.position[0],
+    parent.scale[1] * child.position[1],
+    parent.scale[2] * child.position[2],
+  ];
+  const rotated = quatRotateVec3(parent.rotation, scaled);
+  return {
+    position: xyz(
+      parent.position[0] + rotated[0],
+      parent.position[1] + rotated[1],
+      parent.position[2] + rotated[2],
+    ),
+    rotation: quatMultiply(parent.rotation, child.rotation),
+    scale: [
+      parent.scale[0] * child.scale[0],
+      parent.scale[1] * child.scale[1],
+      parent.scale[2] * child.scale[2],
+    ],
+    renderOrder: child.renderOrder,
+  };
 }
 
 /** Map a world AABB of `local` bounds through a transform, returning a new world AABB. */

@@ -56,5 +56,6 @@ export function useTimelinePlayer(
     };
   }, [built]);
 
-  return { player: built?.player ?? null, scene: built?.scene ?? null, snapshot };
+  const scene = built && built.scene.kind === "scene-2d" ? built.scene : null;
+  return { player: built?.player ?? null, scene, snapshot };
 }

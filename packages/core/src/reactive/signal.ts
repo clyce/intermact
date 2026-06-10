@@ -78,6 +78,19 @@ export function signal<T>(initial: T): Signal<T> {
   return createSignal(initial);
 }
 
+/**
+ * Create a signal bound to an explicit id (design.md §17 deserialization). The
+ * id from a {@link SerializedProject} must match the `signalId` recorded in the
+ * timeline `tween-signal` ops so the deserialized {@link ReactiveEngine} drives
+ * the right cell. Only `deserialize` should use this; authoring code uses
+ * {@link signal}/`ctx.signal`.
+ */
+export function createSignalWithId<T>(id: number, initial: T): Signal<T> {
+  const sig = createSignal(initial);
+  signalIds.set(sig as object, id as SignalId);
+  return sig;
+}
+
 /** Shorthand for a numeric signal (Manim ValueTracker equivalent). */
 export function valueTracker(initial: number): Signal<number> {
   return signal(initial);

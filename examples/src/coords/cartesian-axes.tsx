@@ -14,6 +14,7 @@ const program = createProgram(async (ctx) => {
   const axes = scene.getAxes({
     x: [-4, 4],
     y: [-3, 3],
+    showTickLabels: false,
     style: { stroke: "#64748b", lineWidth: 0.025 },
     xLabel: "x",
     yLabel: "y",
@@ -23,7 +24,7 @@ const program = createProgram(async (ctx) => {
     { position: xy(1.5, 1) },
   );
 
-  await scene.play(axes.fadeIn({ duration: 0.6 }));
+  await scene.play(axes.create({ duration: 2, mode: "sequential" }));
   await scene.play(dot.create({ duration: 1 }));
   await scene.wait(0.5);
   await scene.play(axes.fadeOut({ duration: 0.6 }));

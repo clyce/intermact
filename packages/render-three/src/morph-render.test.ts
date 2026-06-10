@@ -7,6 +7,7 @@ import {
   rectangle,
   xy,
   type IMObject2D,
+  type RuntimeState2D,
 } from "@intermact/core";
 import type { Mesh } from "three";
 import { ThreeObjectView } from "./object-view";
@@ -56,11 +57,11 @@ describe("morph geometryVersion ↔ ThreeObjectView (phase-2-review P1)", () => 
 
     expect(atStart.state.geometryVersion).toBeLessThan(atMid.state.geometryVersion);
     expect(atMid.state.geometryVersion).toBeLessThan(atEnd.state.geometryVersion);
-    expect(atMid.state.geometryOverride).toBeDefined();
-    expect(atEnd.state.geometryOverride).toBeDefined();
+    expect((atMid.state as RuntimeState2D).geometryOverride).toBeDefined();
+    expect((atEnd.state as RuntimeState2D).geometryOverride).toBeDefined();
 
-    const startPts = atStart.state.geometryOverride!.contours[0]!.points;
-    const endPts = atEnd.state.geometryOverride!.contours[0]!.points;
+    const startPts = (atStart.state as RuntimeState2D).geometryOverride!.contours[0]!.points;
+    const endPts = (atEnd.state as RuntimeState2D).geometryOverride!.contours[0]!.points;
     expect(startPts[0]).not.toBeCloseTo(endPts[0]!, 1);
 
     const view = new ThreeObjectView(atStart.object as IMObject2D);

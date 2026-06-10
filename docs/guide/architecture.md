@@ -57,13 +57,20 @@ flowchart LR
 
 构建期通过 `setSignalRegistrar` 自动注册 program 内创建的信号。
 
-## v0.1 范围与已知偏差
+## Phase-1 & Phase-2 范围
 
-完整列表见 [v0.1 验收清单](../project/v01-checklist.md)。摘要：
+| 阶段 | 指南章节 | 验收清单 |
+| --- | --- | --- |
+| v0.1 | [核心能力](/guide/program-and-scene)（程序 → 响应式） | [v0.1 清单](../project/v01-checklist.md) |
+| v0.2 | [数理工具箱](/guide/scale)（Scale → Inspector） | [v0.2 清单](../project/v02-checklist.md) |
 
-- Morph 仅 **arc-length** 策略；分部 matching 在 M9
-- `decimalNumber` 示例用世界坐标定位，非 UV HUD
+Phase-2 已交付：`arc-length` / `anchor` / `matching` / `cross-fade` Morph、`group2D` 部件 key、OpenType + MathJax 文本/LaTeX、拖拽与 hit-test、布局与 Inspector。
+
+## 已知偏差（跨阶段）
+
+- `decimalNumber` 部分示例用世界坐标定位，非 UV HUD
 - `call` 效果不可 seek（拖拽预览时跳过并告警一次）
-- 屏幕空间恒定线宽为 ribbon 近似；专用 shader 后续里程碑
+- 屏幕空间恒定线宽为 ribbon 近似；专用 shader 为后续优化项
+- matching 的 remover/introducer 在单对象通道上用几何塌缩/生长实现（非逐部件 alpha）
 
-架构细节与 API 契约以 [`dev-docs/design.md`](https://github.com/intermact/intermact/blob/main/dev-docs/design.md) 为准；实现进度日志见 §0.1。
+架构细节与 API 契约以 [`dev-docs/design.md`](https://github.com/intermact/intermact/blob/main/dev-docs/design.md) 为准；实现进度见 §0.1（Phase-1）、§0.2（Phase-2）、§0.3（Phase-3）。

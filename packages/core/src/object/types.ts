@@ -33,6 +33,12 @@ export interface ObjectPart2D {
   readonly object: IMObject2D;
 }
 
+/** A keyed sub-object of a 3D composite (`group3D`); mirror of {@link ObjectPart2D}. */
+export interface ObjectPart3D {
+  readonly key: string;
+  readonly object: IMObject3D;
+}
+
 /** A 2D object definition. */
 export interface IMObject2D extends IMObjectBase<"2d"> {
   readonly geometry: GeometryProvider2D;
@@ -43,6 +49,8 @@ export interface IMObject2D extends IMObjectBase<"2d"> {
 /** A 3D object definition (full set lands in M14). */
 export interface IMObject3D extends IMObjectBase<"3d"> {
   readonly geometry: GeometryProvider3D;
+  /** Keyed sub-objects for composite objects (`group3D`); reserved for 3D matching. */
+  readonly parts?: readonly ObjectPart3D[];
 }
 
 /** Any object definition. */

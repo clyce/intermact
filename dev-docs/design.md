@@ -139,6 +139,110 @@ Intermact 是一个基于 React Three Fiber 的交互式数理可视化平台。
   - **按字形 fill group**：`triangulateGroups` + `classifyFillGroup` 在机制上正确处理同字形的内外环（如 `0`、`\frac`），避免积分公式填充成内圈。
   - `latex/transform-matching-tex` 改为 MathJax 衬线。回归：**141** 项测试（含闭合轮廓、LTR 描边裁切、多行书写持久可见）。
 
+### 0.3 实现进度日志（Phase-3 / v1.0）
+
+记录 Phase-3（PCG 演示系统）各里程碑（M13–M17）落地时与本设计的对齐情况及具体化选择。仅记录偏差/具体化，架构契约以上文各章为准。系统性代码评审见 `dev-docs/phase-3-review.md`（§13）。
+
+- 入口基线（2026-06-09）：Phase-2 闸口 `pnpm run ci` 全绿（152 用例 / depcruise 134 模块 0 违规 / 四包 0.2.0）。
+
+- **M13 PCG 核心（2026-06-09，v0.3.0）**：新增 headless `packages/core/src/pcg/` 生成层，落地 §6 全量生成器：
+  - 场/采样（§6.2）：`ScalarField2D`/`VectorField2D`/`ScalarField3D` + 构造器；`marchingSquares` + `stitchSegments`；`isoline`/`heatmap`/`vectorFieldObject`/`streamlines`（RK4）。
+  - 参数/晶格（§6.3）：`parametricCurve2D`/`lattice`/`tiling`（square/hex/triangle）。
+  - 递归/文法（§6.4）：`lSystem`（turtle + 种子化抖动）、`fractal`（Koch/Sierpinski/IFS 混沌游戏）、`recursiveTree`、`graphObject`（force/tree/circular）、`cellularAutomaton`（Rule-N 1D 时空图 / Game of Life 2D）+ `cellularAutomatonFrames`。
+  - 数据驱动（§6.5）：`mapData`/`barChart`/`scatter`/`lineChart`（经 §7 `linearScale`，保留 key）。
+  - 算子（§6.6）：`transformObject`/`repeatObject`/`instanceField`/`mapPoints`/`along`/`booleanOp`（多边形布尔在 `geometry/boolean.ts`，Greiner–Hormann）。
+  - 确定性（§6.7）：随机仅经注入的 `ctx.rng`（`createRng`），同 seed 可复现（已用例固化）。
+  - **具体化/与设计稿差异**：
+    1. `repeat` 与动画层 `repeat` 在扁平命名空间冲突，PCG 算子改名 `repeatObject`（语义不变）。
+    2. `isosurface`（marching cubes）需 3D 网格，顺延至 M14（`ScalarField3D` 已先行）。
+    3. `heatmap` 经新增的逐填充组颜色通道渲染（`GeometryProvider2D.fillGroupColors` / `FillTrait.fillGroupColors` + render-three 对应分支），等价于"逐格填色网格"；纹理化属 M16 优化。
+    4. `instanceField` 产出 `InstancedTrait` 标记但当前以聚合几何回退渲染（正确但未 GPU 实例化，留待 M16）。
+    5. `booleanOp` 面向简单、横切相交的多边形；共享顶点/共线重叠等退化情形不在范围内。
+    6. PCG 算子的变换参数采用本地结构化类型（避免 `pcg → scene` 依赖），与 `Transform2D` 在共用子集上结构兼容；算子当前为 2D，3D 变体随 M14。
+  - 架构守护：`.dependency-cruiser.cjs` 新增 `pcg-headless-deps`（禁止 `pcg → scene/animation/program/reactive/interaction/resource`）。回归：`pnpm run ci` 全绿（**179** 用例 / depcruise 148 模块 0 违规 / 四包 0.3.0）。
+
+- **M14 3D 全量（2026-06-09，v0.4.0）**：在不改动 2D 路径的前提下并行扩出 3D 管线（§5.3、§9.3、§10、§10.1）。
+  - 数学（§10.1）：`math/quaternion.ts` 四元数代数（`quatFromAxisAngle/Euler/Slerp/LookAt/Multiply/RotateVec3`，`[x,y,z,w]` 对齐 three.js）。
+  - 运行时（§4.3/§5.3）：`RuntimeState` 联合化（`dimension` 判别）+ `RuntimeState3D`/`ResolvedTransform3D`/`RuntimeState3DPatch`；`store`/`world-transform` 按维度分发，新增 `composeTransform3D`/`resolveTransform3D`/`IDENTITY_TRANSFORM_3D`。
+  - 动画（§3.2/§11）：`Player`/`track`/`storyboard`/`spec` 泛化为 2D\|3D；`PropertyPath.space` 区分 2D 标量旋转与 3D 四元数 slerp；3D `Create`（线按段、网格按三角批次 `setDrawRange`）。
+  - 几何/对象（§5.3）：`GeometryProvider3D`（line/mesh/points）+ `geometry/provider3d.ts`（弧长/法线/打包）；`object3d/factories.ts`（`polyline3D`/`curve3D`/`meshObject`/`surface3D`/`pointCloud3D`/`axes3D`）。
+  - 场景/相机（§10、§10.1）：`Scene3D`（注册/层级/`group3D`/时间线复用 `StoryboardBuilder`）、`RegisteredObject3D`、`RegisteredCamera3D`（`moveTo/lookAt/zoomTo/dollyTo/orbit`，相机即可 seek 的时间线节点——关闭 v0.1 相机延期）。
+  - 生成（§6）：`geometry/marching-cubes.ts` + `pcg/isosurface.ts`（接入 `ScalarField3D`）。
+  - 程序/渲染（§10、§15.2）：`ctx.createScene3D`/`createCamera3D` + `BuiltProgram.dimension`；`render-three` 3D 视图与 `ThreeSceneView` 维度分发；`render-r3f` `SceneView3D`（透视相机 + 内置 orbit/dolly）与 `RenderedScene`（离屏渲染目标，§19.5）。
+  - **具体化/与设计稿差异**：
+    1. marching cubes 采用 **marching-tetrahedra** 变体（Bourke）：天然水密、免查表，测试以单位球水密性（每内部边恰 2 三角）+ 面积逼近 \(4\pi r^2\) + 字节级可复现校验。
+    2. 并行 3D 管线（非改造 2D）：2D 专用渲染/检视加 `dimension` 守卫；2D 用例零回归。
+    3. `render-three` 3D 折线用 `LineSegments`（端点成对）以正确渲染本不相接的多段折线（如 `axes3D`）。
+    4. `SceneView3D.interactive`：`true` 内置极坐标 orbit/dolly（脚本相机让位），`false` 严格跟随时间线相机节点；未引入 `@react-three/drei`。
+    5. `RenderedScene` 每帧渲染目标前后保存/恢复 `clearColor`/`alpha`，避免污染宿主帧。
+    6. 源内 `VERSION` 常量统一升至 `0.4.0`（修正 M13 仅升 `package.json` 的遗留不一致）。
+  - 回归：`pnpm run ci` 全绿（**205** 用例 / depcruise 164 模块 0 违规 / 四包 0.4.0）。
+
+- **M15 序列化 / 导出 / 嵌入（2026-06-09，v0.5.0）**：把构建后的程序变为可移植数据并能复原（§17）。
+  - 序列化（§17）：新增 `core/src/serialize/`。`serialize(player)` 产出纯 JSON `SerializedProject`（烘焙对象 + 时间线 op-log + 信号 + 种子），`deserialize` 在不重跑用户程序的前提下复原等价 `Player`。
+  - op-log（§17）：`StoryboardBuilder` 记录 `TimelineOp`（play/commit/wait/marker 的原始 `AnimationSpec`）；`Scene2D/3D` 额外保存 **pristine 初值**（编译期 baseline 补丁前），反序列化在其上重放 op-log 即可逐字节复现。
+  - Phase-1 欠账了结：`EasingFn`→命名 easing（degrade 退化 `linear` / strict 抛错）；`morph.toObject`→`bakeObjectDef` 烘焙；`call`→丢弃或抛错；reactive 信号→数字 id 持久化（`serializeInitialSignals` + `createSignalWithId` 重建并注册）。
+  - 分享/导出（§17）：`share-url.ts`（base64url，`TextEncoder`/`TextDecoder`，headless 与浏览器同源）；`frame-hash.ts`（`sampleFrames`/`sampleFrameHashes`/`hashSnapshot`，FNV-1a 仅哈希运行态）；`svg.ts`（2D headless SVG 快照）；`react/export/recordCanvas.ts`（`recordCanvasVideo` 自动协商 mime、`captureFrameSequencePng` 定帧确定性导出、`captureFramePng`/`downloadBlob`）+ `react/export/gif.ts`（无依赖 `encodeGif`/`exportCanvasGif`）+ `react/embed/web-component.ts`（`defineIntermactEmbed`/`buildEmbedIframe`）。
+  - 嵌入/语义/a11y（§17）：`react/embed/web-component.ts`（`defineIntermactEmbed` → `<intermact-embed>` 自管 React 根）、`react/components/SerializedCanvas.tsx`（2D/3D 复原渲染）、`semantic.ts` + `SemanticOverlay`（metadata href/a11y 叠加）、`reduced-motion.ts`（`degradeForReducedMotion` 时长归零→终态）+ `usePrefersReducedMotion`。
+  - **具体化/与设计稿差异**：
+    1. 不重跑程序而重放 op-log + pristine 初值；契约以"帧哈希逐帧相等"校验（2D/3D/morph）。
+    2. 烘焙对象按自然顶点采样为扁平几何再经工厂重建——参数化实时重算、交互、文本布局 token 顺序降级为静态几何（外观一致，失活性）。
+    3. 派生对象（`registerReactive` 的 `build` 闭包）不序列化；反序列化保留信号 op 但无派生几何重建（帧哈希仅覆盖运行态）。
+    4. SVG 快照为 2D headless 路径（按 revealEnd 近似裁剪）；3D 帧与 PNG 走浏览器 GL canvas。
+    5. 3D 相机 optics 随工程序列化（`PlayerSerializationMeta.cameras` 从 viewports 采集），反序列化重建 `RegisteredCamera3D`。
+    6. `@intermact/react` 新增 `react-dom`（peer + dev），供 `<intermact-embed>` 自挂载。
+  - 回归：`pnpm run ci` 全绿（**216** 用例 / depcruise 181 模块 0 违规 / 四包 0.5.0）。
+
+- **M16 性能与大数据（2026-06-09，v0.6.0）**：把 §15.2 的性能策略落到热路径（不改既有渲染契约）。
+  - 采样 memoize（§15.2 #1）：`geometry/memoize.ts`（`createSamplingMemo`/`sampleOptionsKey`）接入 `geometry/provider.ts`；对象定义不可变 ⇒ provider 即 `(object, geometryVersion, opts)` 缓存域，同 opts 命中返回同引用。
+  - GPU 实例化（§15.2 #3）：`InstancedTrait` 携带 base 几何 + `InstanceTransform2D[]`；`instanceField` 双轨（聚合几何进 trait 供 headless/SVG/拾取 + 实例数据供 GPU）；`render-three/object-view-instanced.ts` 用 `InstancedMesh`（fill/stroke 各一），`ThreeSceneView` 按 trait 分发。
+  - 区间剪枝：`animation/player.ts` `applyAt` 对 start 升序轨道二分（`upperBoundByStart`），只评估活动窗口，剪掉未开始尾部。
+  - Worker 化（§15.2 #6，core 保持 DOM-free）：`render-three/worker/`（`protocol`/`kernel`/`client`/`entry`）承载纯任务 `resample`/`triangulate`/`marching-cubes`/`parse-svg-path`；`geometry/marching-cubes.ts` 拆出可序列化 `marchingCubesField`（预采样标量场）；宿主构造 Worker，无 Worker 时同步回退。
+  - 性能预算：`core/perf/perf-budget.test.ts`（计入 `vitest run`）+ `core/perf/sampling.bench.ts`（`pnpm run bench`）。
+  - **具体化/与设计稿差异**：
+    1. 实例化对象双轨：GL 走 `InstancedMesh`、无 GPU 路径回退聚合几何（像素一致）；逐实例 reveal 裁剪未做（整体淡入走 group opacity/fillProgress）。
+    2. memoize 落 provider 层、命中返回同引用（依赖采样结果不可变、消费只读）。
+    3. 区间剪枝仅剪未开始尾部；已完成轨道每帧仍从 baseline 重算（正确性）；依赖 `Storyboard.tracks` 按 start 升序。
+    4. Worker 仅纯函数子集；LaTeX 的重纯步骤即 SVG 路径解析（MathJax DOM 步骤留主线程）；glue 全在 `render-three`。
+    5. 3D 点云单色（`PointsMaterial` 未用 per-point scalar 着色）。
+  - 回归：`pnpm run ci` 全绿（**233** 用例 / depcruise 193 模块 0 违规 / 四包 0.6.0）。
+- **M17 扩展性 / 插件（2026-06-09，v0.7.0）**：落地 §18 注册表式扩展——新对象/动画/生成器/渲染后端不改 core。
+  - 注册表：`extend/registry.ts` 的泛型 `Registry<K,V>`（register/get/has/require/unregister/override，重复键 `plugin-error`）；`extend/types.ts` 的四类 descriptor（`ObjectTypeDescriptor`/`AnimationCompiler`/`GeneratorDescriptor`/`RendererFactory`）+ `Registries`；`extend/registries.ts` 的 `createRegistries()` 与进程级 `globalRegistries`。
+  - 插件：`extend/plugin.ts` 的 `definePlugin`/`installPlugin(plugins?)`（默认装进 `globalRegistries`）+ 分发助手 `createRegisteredObject`/`runGenerator`/`selectRenderer`/`requireRenderer`。
+  - 动画接线（§18 关键）：`spec.ts` 增 `custom` 联合项（`type`+`targetId`+可序列化 `params`+`duration`）；`animation/track.ts` 增 `AnimationCompiler`/`CustomAnimationContext`，`compileSpec` 的 `custom` 分支经 `context.resolveAnimation(type)` 取 compiler；`StoryboardBuilder` 默认把 `resolveAnimation` 指向 `globalRegistries.animations`（可覆盖），故 `scene.play(customAnimation(...))` 无需穿线即处处可见；`orchestration.ts` 增 `customAnimation()` 工厂。
+  - 序列化：`SerializedSpec`/`bakeSpec`/`unbakeSpec`/reduced-motion 折叠覆盖 `custom`；反序列化经同名注册 compiler 重解析，缺插件则 `unsupported-animation`。
+  - 示例：`plugin/custom-object`（注册 gear 对象类型 + spin 动画 kind）、`plugin/custom-generator`（注册 golden-angle phyllotaxis 生成器）、`plugin/webgpu-backend`（注册 `webgpu`/`webgl` `RendererFactory` + `selectRenderer` 选择，PoC）。
+  - **具体化/与设计稿差异**：
+    1. 自定义动画经「全局注册表 + 注入解析器」接线；为避免环，解析器以函数注入，`animation/track` 不反向依赖 `extend`（仅 `extend → animation/track` 取类型）。
+    2. 对象类型注册表与 trait 模型互补：插件对象返回 trait 即走既有渲染管线，descriptor 主要承担按名构造+发现，而非渲染分发开关。
+    3. WebGPU 后端为注册表占位（特性探测 + 选择），真实设备接线留 PoC 下一步，场景仍走 WebGL。
+    4. 示例 `install` 以 `has()` 守护幂等（防 HMR 重入重复键）；库侧默认重复键报错。
+  - 回归：`pnpm run ci` 全绿（**243** 用例 / depcruise 199 模块 0 违规 / 四包 0.7.0）。
+- **◆ L3 v1.0 验收（2026-06-09，v1.0.0）**：Phase-3（M13–M17）收口。`pnpm run ci` 全绿（lint + typecheck + 用例 + depcruise 0 违规 + build）；21 个 P3 示例经 `examples` 生产构建可运行；性能预算纳入 CI；插件机制端到端验证（新增对象/生成器/动画 kind 不改 core）。四库包 `VERSION`/`package.json` 升至 `1.0.0`，API Reference 经 TypeDoc 重生。验收清单 `docs/project/v1-checklist.md`。**稳定性**：`@intermact/core` 公共 API（对象/几何/动画/场景/序列化/扩展）标记 stable；`render-*`/`react` 适配层 stable；WebGPU 后端、逐实例 reveal/拾取、对象注册表自定义序列化为 experimental（见 §0.3 各里程碑偏差）。验收时实测 **244 用例 / 199 模块**；经 §0.3.1 评审清偿后增至 **296 用例 / 210 模块**（以 CI 实测为准）。
+
+### 0.3.1 Phase-3 评审清偿与决策台账（2026-06-10）
+
+针对 `dev-docs/phase-3-review.md`（§13）的系统评审，确立"代码 vs 设计稿"裁决原则：**实现更优**者固化为设计决策（保留代码并回写设计稿）；**设计更优**者以代码补齐到契约。逐项清偿进度见 phase-3-review.md §13 清偿记录表。
+
+**A. 保留代码（实现更优 / 合理偏差，固化为设计决策）**
+
+1. **marching-tetrahedra** 取代经典 marching-cubes：天然水密、无查表歧义面（M14 偏差①）。
+2. **heatmap 逐填充组 `fillGroupColors`**：等价"逐格填色网格"，纹理化属 M16 性能优化而非正确性（M13 偏差③）。
+3. **`repeat` → `repeatObject`**：与动画层 `repeat` 在扁平命名空间冲突，语义不变（M13 偏差①）。
+4. **PCG 生成器 headless + `spec.rng` 注入**：保持纯函数、避免 `pcg → scene` 依赖；`ctx.rng` 为 build 期默认随机源。凡需随机而未注入 `rng` 者一律 **fail-fast**（抛 `invalid-argument`），不再静默退化为伪确定输出（§6.7，CP1 已落地：`lSystem` 抖动、`graphObject` force、`cellularAutomaton` 随机初值、`fractal` 空 IFS）。
+5. **`SerializedProject` 含 `scene`/`cameras` 字段、`deserialize` 返回 `DeserializedProgram`**：设计稿 §17 原型过窄，**以实现为准更新设计稿**（见 §17）。
+6. **WebGPU 维持 PoC**：注册表 + 后端选择即扩展性证明；真实 WGSL 后端工作量与 v1.0 收益不成比例，设计本就标 optional。
+7. **字体注册表作用域化保留同步字形 API（残留并发边角）**：`glyphFor`/`textObject` 等是设计稿 §13 既定的**同步构造 API**（构造期即烘焙轮廓），全量线程化会破坏该公共面。故采用「每次 build 用全局注册表子作用域 + 单一 active 指针」方案：顺序构建与全局预载字体**完全隔离/可见**，仅「program 中途 `await` 的并发交错构建」共享 active 指针为已知残留（§22 约束 8、§22.8）。需该边角隔离者显式注入或全局预载。
+
+**B. 代码对齐设计稿（设计更优，以代码补齐到契约）**
+
+- **M14**：`render(scene, camera) → RenderedScene`（core 化为 `IMObject2D`，`live`/`snapshot` 纹理模式）+ `IntermactCanvas` 多视口 `rect` 渲染。
+- **M17**：registries 注入化（`build`/`scene`/`storyboard`/`deserialize`/`ctx` 透传），`globalRegistries` 退为默认源；字体注册表作用域化（随 build/AssetManager），消除进程级可变态。
+- **3D 管线补完**：相机父子挂载、3D `Create` 弧长 reveal、`ThreeObject3DView` 几何热更新、`Scene3D.getAxes`/`coordinate`、`group3D` 几何聚合工厂、3D traits、点云标量着色、正交相机。
+- **序列化稳健化**：`deserialize` schema 校验（→ `serialization-error`）、`hashRuntimeState` 纳入 `styleOverrides`/`glyphWriteSpans`、`bake` 序列化 `sampleCount`、`decodeShareUrl` 大小上限/Unicode、`<intermact-embed>` 重连 DOM 清理。
+
+**清偿后验证（2026-06-10）**：A/B 两栏全部落地，`phase-3-review.md §13.11` 清偿记录表逐项 ✅。`pnpm run ci` 全绿——**40 文件 / 296 用例**、depcruise **210 模块 / 911 依赖 / 0 违规**、四包 ESM+DTS 构建通过；新增 6 个 Phase-3 示例（`pcg/operators-showcase`、`pcg/data-charts`、`pcg/generators-extra`、`export/svg-snapshot`、`3d/grouping`、`pcg/cellular-automaton` 2D Life）与 4 篇专题指南（`guide/pcg`/`3d`/`export-embed`/`performance`），`gen:reference` + `build:site` 校验通过。
+
 ## 1. 愿景与范围
 
 ### 1.1 三段式愿景
@@ -1297,15 +1401,40 @@ export class IntermactError extends Error {
 - **可访问性**：尊重 `prefers-reduced-motion`（降级为瞬时切换）；为可交互对象生成 aria 叠加层；保证键盘可达（§12.4）。
 
 ```ts
+// 以实现为准（§0.3 决策 5）：相较初版原型，新增 `scene`/`cameras`，使
+// `deserialize` 无需重跑用户程序即可复原场景域/相机；`deserialize` 返回
+// `DeserializedProgram`（Player + 维度 + 场景/相机元数据）而非裸 Player。
 export interface SerializedProject {
   readonly version: string;
+  readonly seed: number | string;
+  /** 主场景描述（kind + 授时 props：2D domain/fit/background、3D coordinate/domain）。 */
+  readonly scene: { readonly kind: "scene-2d" | "scene-3d"; readonly props: unknown };
   readonly objects: readonly SerializedObject[];
   readonly storyboard: SerializedStoryboard;
   readonly signals: Readonly<Record<string, unknown>>;
-  readonly seed: number | string;
+  /** 注册相机（3D 含 position/target/fov/near/far/projection/zoom）。 */
+  readonly cameras: readonly SerializedCamera[];
 }
-export function serialize(player: Player): SerializedProject;
-export function deserialize(data: SerializedProject): Player;
+
+/** 复原后的可播放程序（§17）。 */
+export interface DeserializedProgram {
+  readonly player: Player;
+  readonly dimension: "2d" | "3d";
+  readonly sceneKind: "scene-2d" | "scene-3d";
+  readonly sceneProps: unknown;
+  readonly camera3d?: RegisteredCamera3D;
+}
+
+export function serialize(player: Player, options?: SerializeOptions): SerializedProject;
+// 反序列化先做结构化 schema 校验（`validateSerializedProject`），损坏/被篡改
+// 的载荷以清晰的 `serialization-error` 快速失败。
+export function deserialize(data: SerializedProject): DeserializedProgram;
+
+// 分享 URL（base64url，UTF-8）：`decodeShareUrl` 支持 `maxBytes` 上限（默认 2 MB）
+// 以拒绝超大/恶意载荷。导出工具（@intermact/react）：`recordCanvasVideo`（自动协商
+// MediaRecorder mime）、`captureFrameSequencePng`（定帧确定性 PNG 序列）、
+// `encodeGif`/`exportCanvasGif`（无依赖 GIF89a）、`buildEmbedIframe`（自包含 iframe 片段）。
+export function decodeShareUrl(encoded: string, options?: { maxBytes?: number }): SerializedProject;
 ```
 
 ## 18. 扩展性：插件与注册表
@@ -1314,19 +1443,26 @@ export function deserialize(data: SerializedProject): Player;
 
 ```ts
 export interface Registries {
-  readonly objects: Registry<string, ObjectTypeDescriptor>;     // type -> 采样/序列化/渲染映射
+  // type -> 按名构造 + 发现（descriptor.create(params)）；渲染/序列化复用 trait 管线，
+  // 不经 descriptor 分发（§0.3 M17 决策②；自定义序列化 experimental）。
+  readonly objects: Registry<string, ObjectTypeDescriptor>;
   readonly animations: Registry<string, AnimationCompiler>;     // kind -> 编译为 Track
   readonly generators: Registry<string, GeneratorDescriptor>;   // PCG 生成器
-  readonly renderers: Registry<string, RendererFactory>;        // 渲染后端
+  readonly renderers: Registry<string, RendererFactory>;        // 渲染后端（WebGPU 为 PoC）
 }
 export interface IntermactPlugin {
   readonly name: string;
   install(registries: Registries): void;
 }
 export function definePlugin(plugin: IntermactPlugin): IntermactPlugin;
+// 定义站点保留参数类型 P 的恒等辅助（注册表内擦除为 unknown 存储）：
+export function defineObjectType<P>(d: ObjectTypeDescriptor<P>): ObjectTypeDescriptor<P>;
+export function defineGenerator<P>(d: GeneratorDescriptor<P>): GeneratorDescriptor<P>;
 ```
 
 例如未来加 WebGPU 后端 = 注册一个 `RendererFactory`；加"分形生成器库" = 注册若干 `GeneratorDescriptor`；都不触碰核心模型。
+
+**注册表注入（§22.8 结构性约束）**。`globalRegistries` 是便捷默认，但**可注入**以隔离插件集（多 program、并发构建、并行测试、`src`/`dist` 双实例）：`BuildOptions.registries` 透传至 `Scene2D/3D` → `StoryboardBuilder.resolveAnimation`；`ctx.registries` 暴露给程序与生成器；`DeserializeOptions.registries` 让 `custom` 动画在反序列化端用同一 bundle 解析（缺失即 `unsupported-animation` 快速失败）。`globalRegistries` 经 `globalThis` + `Symbol.for` 单例化，双实例时共享一份并告警。`custom.params` 在 `customAnimation()` 处做 **JSON-safe 校验**（拒绝函数/symbol/undefined/bigint/非有限数/Map/Set/Date/类实例/循环引用），保证 serialize→deserialize 往返。
 
 ## 19. 实例程序
 
@@ -1343,6 +1479,7 @@ export interface IntermactProgramContext {
   mount(scene: Scene2D | Scene3D, camera: RegisteredCamera<unknown>, rect?: { min: RelUV; max: RelUV }): void;
   readonly assets: AssetManager;
   readonly rng: Rng;
+  readonly registries: Registries;   // 本次构建解析自定义对象/动画/生成器/后端用（§18、§22.8）
 }
 export type IntermactProgram = (ctx: IntermactProgramContext) => void | Promise<void>;
 export function createProgram(program: IntermactProgram): IntermactProgram;
@@ -1568,7 +1705,7 @@ export function NestedSceneExample() {
 5. 时间是一等数据：程序产出可检视/序列化的 Storyboard，Player 负责求值。
 6. core 不依赖 React/Three/DOM；渲染器、对象、生成器、动画均可经注册表扩展。
 7. Camera 注册进 Scene、可动画、可父子挂载，但不混入普通几何对象接口（v0.1 2D 路径为偏差，见 §10.1）。
-8. 构建期无进程级全局可变状态；多 program 并发构建须互不干扰（见 §3.2）。
+8. 构建期无进程级全局可变状态；多 program 并发构建须互不干扰（见 §3.2）。注册表（§18）与字体注册表均**可注入/作用域化**：`globalRegistries` 仅为便捷默认（`globalThis`+`Symbol.for` 单例 + 双实例告警），隔离场景经 `BuildOptions.registries`/`DeserializeOptions.registries`/`ctx.registries` 注入；每次 `buildProgram` 用全局字体注册表的**子作用域**（`FontRegistry(parent)`，构建内加载的字体不外泄、全局预载字体仍可见）。**残留**：同步字形 API（`glyphFor`/`textObject`）经单一 active 指针读取该作用域，故在 program 中途 `await` 的**并发交错构建**仍共享 active 指针——此边角需显式注入注册表或全局预载字体。
 9. Scene 不依赖 Canvas；Canvas 可挂载多视口（rect）并嵌入 `RenderedScene`。
 10. 外部实验数据经构建期资源解析或信号注入，不在渲染帧重复昂贵计算。
 11. PCG 随机必须来自种子化 RNG，保证可复现与可分享。

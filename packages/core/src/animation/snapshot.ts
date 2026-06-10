@@ -1,5 +1,5 @@
 import { type IMObject } from "../object/types";
-import { type RuntimeState2D } from "../runtime/state";
+import { type RuntimeState } from "../runtime/state";
 
 /**
  * Per-frame render snapshot (design.md §15.1). The renderer adapter consumes
@@ -11,7 +11,7 @@ import { type RuntimeState2D } from "../runtime/state";
 export interface ObjectRenderState {
   readonly id: string;
   readonly object: IMObject;
-  readonly state: RuntimeState2D;
+  readonly state: RuntimeState;
 }
 
 /** A viewport region's render context (expanded in M3/M5). */

@@ -62,6 +62,17 @@ export class ReactiveEngine {
     }
   }
 
+  /**
+   * Baseline signal values captured at first registration, keyed by numeric
+   * signal id (design.md §17 serialization). These are the values to persist so
+   * a deserialized project restores the same starting state.
+   */
+  serializeInitialSignals(): Record<number, unknown> {
+    const out: Record<number, unknown> = {};
+    for (const [id, value] of this.signalInitialValues) out[id as number] = value;
+    return out;
+  }
+
   /** Apply a numeric value from a compiled signal track (seek-safe). */
   applySignalValue(signalId: SignalId, value: number): void {
     const sig = this.signals.get(signalId);

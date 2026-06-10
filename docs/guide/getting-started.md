@@ -50,7 +50,7 @@ pnpm run dev:docs
 pnpm run ci
 ```
 
-等价于 `lint` + `typecheck` + `test`（67 项 Vitest）+ `depcruise` + `build`。
+等价于 `lint` + `typecheck` + `test`（Vitest 全量）+ `depcruise` + `build`。
 
 ## 最小示例
 
@@ -112,8 +112,19 @@ export function Demo() {
 
 ## 下一步
 
+**Phase-1（v0.1）**
+
 - [架构概览](./architecture.md) — 构建期 vs 播放期、包边界
 - [程序与场景](./program-and-scene.md) — `createProgram` / `Scene2D` / `register`
-- [API Reference](/reference/) — 从源码 TSDoc 自动生成的符号文档
+
+**Phase-2（v0.2）**
+
+- [Scale 与刻度](./scale.md) — linear / log 标度与轴刻度
+- [Morph 与分部匹配](./morph.md) — matching / transformMatchingTex
+- [文本与 LaTeX 管线](./text-latex.md) — OpenType + MathJax writing
+
+**查阅与运行**
+
+- [API Reference](/reference/) — TypeDoc 符号文档（总览含 P1–P2 入口表）
 - [交互示例 `/demos/`](/demos/) — 可运行画廊（与文档同站）
 - [示例目录](../examples/) — 按里程碑的文字索引（可链到 `/demos/#<id>`）

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   buildProgram,
   disposeBuiltProgram,
@@ -20,7 +20,7 @@ export interface UseIntermactPlayerOptions {
 
 /**
  * Run a program's build pass and return the resulting {@link BuiltProgram}
- * (player + scene + viewports), or `null` until the async build completes.
+ * (player + scene + viewports), or `null` while the async build is in flight.
  * Disposes the previous built program when `program`/`seed` changes or on unmount.
  */
 export function useIntermactPlayer(
@@ -28,30 +28,40 @@ export function useIntermactPlayer(
   options?: UseIntermactPlayerOptions,
 ): BuiltProgram | null {
   const [built, setBuilt] = useState<BuiltProgram | null>(null);
+  const builtRef = useRef<BuiltProgram | null>(null);
+  const buildGen = useRef(0);
   const seed = options?.seed;
   const fetcher = options?.fetcher;
   const fetchBinary = options?.fetchBinary;
 
   useEffect(() => {
-    let alive = true;
-    let current: BuiltProgram | null = null;
-    buildProgram(program, { ...(seed !== undefined ? { seed } : {}), fetcher, fetchBinary }).then(
-      (b) => {
-        if (alive) {
-          current = b;
-          setBuilt(b);
-        } else {
+    let cancelled = false;
+    setBuilt(null);
+
+    const run = ++buildGen.current;
+    buildProgram(program, { ...(seed !== undefined ? { seed } : {}), fetcher, fetchBinary })
+      .then((b) => {
+        if (cancelled || run !== buildGen.current) {
           disposeBuiltProgram(b);
+          return;
         }
-      },
-      (err) => {
-        // A silent rejection here would leave the canvas stuck on "Building…".
-        console.error("[intermact] program build failed:", err);
-      },
-    );
+        if (builtRef.current) disposeBuiltProgram(builtRef.current);
+        builtRef.current = b;
+        setBuilt(b);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error("[intermact] program build failed:", err);
+          setBuilt(null);
+        }
+      });
+
     return () => {
-      alive = false;
-      if (current) disposeBuiltProgram(current);
+      cancelled = true;
+      if (builtRef.current) {
+        disposeBuiltProgram(builtRef.current);
+        builtRef.current = null;
+      }
     };
   }, [program, seed, fetcher, fetchBinary]);
 

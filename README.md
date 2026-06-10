@@ -1,3 +1,8 @@
+> (Dis)Claimer
+> This project is 30% manual and 70% vibe coded
+> The 30% includes carefully designed abstraction models, interfaces and architecture, and detailed code specs that leads to a healthy code (hopefully). These work is done by me, a senior software engineer with 10+ years of experience.
+> Further implementation, testing and code review is done vibely.
+
 # Intermact
 
 Intermact is an interactive, React Three Fiber based reimagining of Manim: a

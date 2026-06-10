@@ -1,37 +1,85 @@
+import { assertNever } from "../errors";
 import { clamp, xy } from "../math/vec";
 import { type IMObject } from "../object/types";
 import { type ReactiveEngine } from "../reactive/engine";
-import { type ResolvedTransform2D, type RuntimeState2D } from "../runtime/state";
+import {
+  type ResolvedTransform2D,
+  type ResolvedTransform3D,
+  type RuntimeState,
+} from "../runtime/state";
 import { RuntimeStateStore } from "../runtime/store";
-import { composeTransform2D, IDENTITY_TRANSFORM_2D } from "../runtime/world-transform";
+import {
+  composeTransform2D,
+  composeTransform3D,
+  IDENTITY_TRANSFORM_2D,
+  IDENTITY_TRANSFORM_3D,
+} from "../runtime/world-transform";
 import { type ReactiveSceneHost } from "../reactive/engine";
 import { type ObjectRenderState, type RenderSnapshot, type ViewportSnapshot } from "./snapshot";
-import { type Storyboard } from "./storyboard";
+import { type Storyboard, type TimelineOp } from "./storyboard";
 
 /** Playback lifecycle states. */
 export type PlayerState = "idle" | "playing" | "paused" | "finished";
 
+/**
+ * Build-pass metadata enabling `serialize(player)` without re-running the user
+ * program (design.md ?17). Carries the seed, primary scene descriptor, the
+ * timeline op-log, and baseline signal values. Attached by `buildProgram`.
+ */
+/**
+ * Plain serializable description of a registered 3D camera (design.md ?10.1,
+ * ?17). The camera node's eye/orientation already live in the timeline; this
+ * captures the optics (fov/near/far/projection) so a deserialized project can
+ * reconstruct an equivalent camera for embedding without re-running the program.
+ */
+export interface SerializedCameraMeta {
+  readonly id: string;
+  readonly position: readonly [number, number, number];
+  readonly target: readonly [number, number, number];
+  readonly fov: number;
+  readonly near: number;
+  readonly far: number;
+  readonly projection: "perspective" | "orthographic";
+  readonly zoom: number;
+}
+
+export interface PlayerSerializationMeta {
+  readonly seed: number | string;
+  readonly scene: {
+    readonly kind: "scene-2d" | "scene-3d";
+    readonly props: unknown;
+  };
+  /** Pristine baseline states (pre compile-time baseline patches) keyed by id. */
+  readonly initialStates: ReadonlyMap<string, RuntimeState>;
+  readonly timeline: readonly TimelineOp[];
+  readonly signals: Readonly<Record<number, unknown>>;
+  /** Registered 3D cameras (empty for 2D scenes). */
+  readonly cameras: readonly SerializedCameraMeta[];
+}
+
 /** Optional hooks for the framework-free Player. */
 export interface PlayerOptions {
   /** Initial baseline runtime states keyed by object id. */
-  readonly initialStates: ReadonlyMap<string, RuntimeState2D>;
+  readonly initialStates: ReadonlyMap<string, RuntimeState>;
   /** Object definitions keyed by id, for building snapshots. */
   readonly objects: ReadonlyMap<string, IMObject>;
   /** Viewports to include in every snapshot (M3/M5). */
   readonly viewports?: readonly ViewportSnapshot[];
-  /** Called when a scrub crosses a non-seekable `call` boundary (ยง11.5). */
+  /** Called when a scrub crosses a non-seekable `call` boundary (?11.5). */
   readonly onNonSeekable?: (effectId: string, time: number) => void;
-  /** Reactive engine for signal tracks and derived/updater flush (ยง8). */
+  /** Reactive engine for signal tracks and derived/updater flush (?8). */
   readonly reactive?: ReactiveEngine;
   /** Primary scene for reactive geometry rebuilds. */
   readonly scene?: ReactiveSceneHost;
-  /** Transform-hierarchy parent links (child id โ’ parent id), design.md ยง9.3. */
+  /** Transform-hierarchy parent links (child id ÿÿÿ parent id), design.md ?9.3. */
   readonly parents?: ReadonlyMap<string, string>;
+  /** Serialization metadata (design.md ?17); attached by `buildProgram`. */
+  readonly serialization?: PlayerSerializationMeta;
 }
 
 /**
  * The Player owns a Storyboard and produces per-frame snapshots (design.md
- * ยง3.2). It is framework-free: continuous playback is driven externally via
+ * ?3.2). It is framework-free: continuous playback is driven externally via
  * {@link Player.update} (the R3F layer runs a RAF loop), while `seek` provides
  * deterministic random access. core never touches `requestAnimationFrame`.
  */
@@ -47,12 +95,23 @@ export class Player {
   /** Effect ids already warned about during scrubbing (warn once each). */
   private readonly warnedEffects = new Set<string>();
 
+  /**
+   * Start times of `storyboard.tracks` / `signalTracks` (both start-sorted by
+   * {@link StoryboardBuilder.build}). Cached so {@link applyAt} can binary-search
+   * the active window and skip not-yet-started tracks (interval pruning, design.md
+   * ?15.2) instead of scanning the whole list every frame.
+   */
+  private readonly trackStarts: readonly number[];
+  private readonly signalStarts: readonly number[];
+
   constructor(
     readonly storyboard: Storyboard,
     private readonly options: PlayerOptions,
   ) {
     this.store = new RuntimeStateStore();
     this.store.resetTo(options.initialStates);
+    this.trackStarts = storyboard.tracks.map((t) => t.start);
+    this.signalStarts = storyboard.signalTracks.map((t) => t.start);
     this.applyAt(0);
   }
 
@@ -70,6 +129,26 @@ export class Player {
   }
   get state(): PlayerState {
     return this._state;
+  }
+
+  /** Object definitions keyed by id (for serialization / inspection). */
+  getObjects(): ReadonlyMap<string, IMObject> {
+    return this.options.objects;
+  }
+
+  /** Baseline runtime states keyed by id (for serialization / inspection). */
+  getInitialStates(): ReadonlyMap<string, RuntimeState> {
+    return this.options.initialStates;
+  }
+
+  /** Transform-hierarchy parent links keyed by child id (design.md ?9.3). */
+  getParents(): ReadonlyMap<string, string> {
+    return this.options.parents ?? new Map();
+  }
+
+  /** Serialization metadata, when the Player was assembled by `buildProgram`. */
+  getSerializationMeta(): PlayerSerializationMeta | undefined {
+    return this.options.serialization;
   }
 
   play(): void {
@@ -151,7 +230,7 @@ export class Player {
     return () => this.subscribers.delete(onFrame);
   }
 
-  /** Run reactive updaters/derived rebuilds before sampling a frame (ยง8.4). */
+  /** Run reactive updaters/derived rebuilds before sampling a frame (?8.4). */
   prepareFrame(): void {
     if (this.options.reactive && this.options.scene) {
       this.options.reactive.flush(this.options.scene, this.store, this._time);
@@ -166,16 +245,31 @@ export class Player {
     const hierarchical = parents !== undefined && parents.size > 0;
     const tCache = hierarchical ? new Map<string, ResolvedTransform2D>() : null;
     const oCache = hierarchical ? new Map<string, number>() : null;
+    const t3Cache = hierarchical ? new Map<string, ResolvedTransform3D>() : null;
     const objects = new Map<string, ObjectRenderState>();
     for (const [id, state] of states) {
       const object = this.options.objects.get(id);
       if (!object) continue;
-      let out = state;
+      let out: RuntimeState = state;
       if (hierarchical) {
-        const world = this.resolveWorldTransform(id, states, parents, tCache!);
         const opacity = this.resolveWorldOpacity(id, states, parents, oCache!);
-        if (world !== state.transform || opacity !== state.opacity) {
-          out = { ...state, transform: world, opacity };
+        switch (state.dimension) {
+          case "2d": {
+            const world = this.resolveWorldTransform(id, states, parents, tCache!);
+            if (world !== state.transform || opacity !== state.opacity) {
+              out = { ...state, transform: world, opacity };
+            }
+            break;
+          }
+          case "3d": {
+            const world = this.resolveWorldTransform3D(id, states, parents, t3Cache!);
+            if (world !== state.transform || opacity !== state.opacity) {
+              out = { ...state, transform: world, opacity };
+            }
+            break;
+          }
+          default:
+            assertNever(state, "Unhandled runtime-state dimension in getSnapshot.");
         }
       }
       objects.set(id, { id, object, state: out });
@@ -186,18 +280,19 @@ export class Player {
   /** Compose a child's world transform from its parent chain (memoized per frame). */
   private resolveWorldTransform(
     id: string,
-    states: ReadonlyMap<string, RuntimeState2D>,
+    states: ReadonlyMap<string, RuntimeState>,
     parents: ReadonlyMap<string, string>,
     cache: Map<string, ResolvedTransform2D>,
   ): ResolvedTransform2D {
     const cached = cache.get(id);
     if (cached) return cached;
     if (cache.has(id)) {
-      // Cycle in parent chain โ€” return identity to avoid infinite recursion.
+      // Cycle in parent chain ÿÿÿ return identity to avoid infinite recursion.
       return IDENTITY_TRANSFORM_2D;
     }
     cache.set(id, IDENTITY_TRANSFORM_2D);
-    const local = states.get(id)?.transform;
+    const st = states.get(id);
+    const local = st && st.dimension === "2d" ? st.transform : undefined;
     const parentId = parents.get(id);
     let world: ResolvedTransform2D;
     if (!local) {
@@ -214,10 +309,39 @@ export class Player {
     return world;
   }
 
+  /** Compose a child's 3D world transform from its parent chain (memoized per frame). */
+  private resolveWorldTransform3D(
+    id: string,
+    states: ReadonlyMap<string, RuntimeState>,
+    parents: ReadonlyMap<string, string>,
+    cache: Map<string, ResolvedTransform3D>,
+  ): ResolvedTransform3D {
+    const cached = cache.get(id);
+    if (cached) return cached;
+    if (cache.has(id)) return IDENTITY_TRANSFORM_3D;
+    cache.set(id, IDENTITY_TRANSFORM_3D);
+    const st = states.get(id);
+    const local = st && st.dimension === "3d" ? st.transform : undefined;
+    const parentId = parents.get(id);
+    let world: ResolvedTransform3D;
+    if (!local) {
+      world = IDENTITY_TRANSFORM_3D;
+    } else if (parentId && states.has(parentId)) {
+      world = composeTransform3D(
+        this.resolveWorldTransform3D(parentId, states, parents, cache),
+        local,
+      );
+    } else {
+      world = local;
+    }
+    cache.set(id, world);
+    return world;
+  }
+
   /** Multiply opacity down the parent chain (memoized per frame). */
   private resolveWorldOpacity(
     id: string,
-    states: ReadonlyMap<string, RuntimeState2D>,
+    states: ReadonlyMap<string, RuntimeState>,
     parents: ReadonlyMap<string, string>,
     cache: Map<string, number>,
   ): number {
@@ -235,18 +359,28 @@ export class Player {
     return opacity;
   }
 
-  /** Reset the store to baseline and apply every track active at `time`. */
+  /**
+   * Reset the store to baseline and apply every track active at `time`. Tracks
+   * are start-sorted, so a binary search prunes the not-yet-started tail
+   * (interval pruning, design.md ?15.2): only tracks with `start <= time` are
+   * evaluated. Completed tracks still evaluate to their settled value (progress
+   * clamped to 1) because the store is rebuilt from baseline each frame.
+   */
   private applyAt(time: number): void {
     this.store.resetTo(this.options.initialStates);
-    for (const track of this.storyboard.tracks) {
-      if (track.start > time) continue;
+    const tracks = this.storyboard.tracks;
+    const activeCount = upperBoundByStart(this.trackStarts, time);
+    for (let i = 0; i < activeCount; i++) {
+      const track = tracks[i]!;
       const local = track.duration > 0 ? clamp((time - track.start) / track.duration, 0, 1) : 1;
       this.store.applyPatch(track.evaluate(local));
     }
     if (this.options.reactive) {
       this.options.reactive.resetSignalsToInitial();
-      for (const track of this.storyboard.signalTracks) {
-        if (track.start > time) continue;
+      const signalTracks = this.storyboard.signalTracks;
+      const activeSignals = upperBoundByStart(this.signalStarts, time);
+      for (let i = 0; i < activeSignals; i++) {
+        const track = signalTracks[i]!;
         const local = track.duration > 0 ? clamp((time - track.start) / track.duration, 0, 1) : 1;
         this.options.reactive.applySignalValue(track.signalId, track.evaluate(local));
       }
@@ -255,7 +389,7 @@ export class Player {
 
   /**
    * Warn (once per effect) that scrubbing skips a non-seekable `call` boundary
-   * (design.md ยง11.5). Routed through `onNonSeekable` if provided, else a
+   * (design.md ?11.5). Routed through `onNonSeekable` if provided, else a
    * one-time console warning.
    */
   private warnSkippedEffects(time: number): void {
@@ -294,4 +428,20 @@ export class Player {
     const snapshot = this.getSnapshot();
     for (const subscriber of this.subscribers) subscriber(snapshot);
   }
+}
+
+/**
+ * First index `i` in the ascending `starts` array where `starts[i] > time`,
+ * i.e. the count of tracks whose `start <= time`. O(log n) interval-pruning
+ * search used by {@link Player.applyAt}.
+ */
+function upperBoundByStart(starts: readonly number[], time: number): number {
+  let lo = 0;
+  let hi = starts.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (starts[mid]! <= time) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
 }

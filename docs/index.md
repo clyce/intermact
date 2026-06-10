@@ -35,11 +35,14 @@ features:
   - icon: 📡
     title: 响应式最小集
     details: Signal / derived / valueTracker / tweenSignal，Leva 调参驱动几何实时重算。
+  - icon: 📊
+    title: 数理工具箱（v0.2）
+    details: Scale、FunctionGraph/Riemann、Morph matching、OpenType/LaTeX writing、拖拽交互与 Inspector。
 ---
 
-## 当前版本：v0.1（Phase-1 已完成）
+## 文档覆盖：Phase-1 & Phase-2（v0.1–v0.2）
 
-Phase-1 交付了从空 Canvas 到「基础 2D 叙事 + 交互函数曲线」的完整闭环。在线文档覆盖 M0–L1 全部公开 API 与示例索引；完整架构契约见仓库内 [`dev-docs/design.md`](https://github.com/intermact/intermact/blob/main/dev-docs/design.md)。
+**Phase-1（v0.1）** 交付从空 Canvas 到「基础 2D 叙事 + 交互函数曲线」的完整闭环；**Phase-2（v0.2）** 扩展 Scale、数理构件、Morph matching、文本/LaTeX、交互与布局。指南、API Reference 总览与示例索引均已覆盖 M0–L2 公开 API。仓库当前版本为 **v1.0**（含 Phase-3 PCG/3D/导出/插件）；Phase-3 概念见 [扩展系统](/guide/extensibility)。完整架构契约见 [`dev-docs/design.md`](https://github.com/intermact/intermact/blob/main/dev-docs/design.md)。
 
 ```bash
 pnpm install

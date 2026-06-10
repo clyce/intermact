@@ -65,6 +65,16 @@ module.exports = {
       },
     },
     {
+      name: "pcg-headless-deps",
+      comment:
+        "pcg/* generators stay headless: no scene/animation/program/reactive/interaction/resource deps (design.md §3.1, §6).",
+      severity: "error",
+      from: { path: "^packages/core/src/pcg" },
+      to: {
+        path: "^packages/core/src/(scene|animation|program|reactive|interaction|resource)(/|$)",
+      },
+    },
+    {
       name: "no-circular",
       comment: "No circular dependencies.",
       severity: "error",

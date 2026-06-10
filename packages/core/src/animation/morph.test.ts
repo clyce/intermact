@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import { circle, createProgram, morph, polygon, xy } from "../index";
 import { buildProgram } from "../program/build";
 import { type Player } from "./player";
+import { type RuntimeState2D } from "../runtime/state";
 
-function stateOf(player: Player, id: string) {
+function stateOf(player: Player, id: string): RuntimeState2D {
   const s = player.getSnapshot().objects.get(id)?.state;
   if (!s) throw new Error(`no state for ${id}`);
+  if (s.dimension !== "2d") throw new Error(`expected 2d state for ${id}`);
   return s;
 }
 

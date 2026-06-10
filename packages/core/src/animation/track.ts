@@ -1,14 +1,26 @@
 import { IntermactError } from "../errors";
-import { type AbsXY, clamp, lerp, type Vec2 } from "../math/vec";
+import {
+  type AbsXY,
+  type AbsXYZ,
+  clamp,
+  lerp,
+  type Quaternion,
+  type Vec2,
+  type Vec3,
+} from "../math/vec";
+import { quatSlerp } from "../math/quaternion";
 import { findTrait, hasTrait } from "../object/traits";
-import { type IMObject2D } from "../object/types";
+import { type IMObject, type IMObject2D } from "../object/types";
 import {
   type GeometryOverride,
   normalizeScale,
+  normalizeScale3,
   type GlyphRevealSpan,
   type RuntimeState2DPatch,
+  type RuntimeState3DPatch,
   type StatePatch,
 } from "../runtime/state";
+import { type StrokeRevealMode } from "./spec";
 import { computeGlyphRevealSpans } from "../text/write-spans";
 import { type SignalId } from "../reactive/signal";
 import { buildMatchingFrames, buildMorphFrames, normalizedContoursOf } from "./morph";
@@ -74,9 +86,53 @@ export interface SignalTrack {
 
 /** Optional compile-time context for specs that need object definitions. */
 export interface CompileContext {
-  readonly getObject: (id: string) => IMObject2D | undefined;
+  readonly getObject: (id: string) => IMObject | undefined;
   /** Merge a patch into the object's baseline runtime state at compile time. */
-  readonly applyBaselinePatch?: (targetId: string, patch: RuntimeState2DPatch) => void;
+  readonly applyBaselinePatch?: (
+    targetId: string,
+    patch: RuntimeState2DPatch | RuntimeState3DPatch,
+  ) => void;
+  /**
+   * Resolve a plugin {@link AnimationCompiler} for a `custom` spec's `type`
+   * (design.md §18). Supplied by the `StoryboardBuilder`, which defaults to the
+   * global animations registry. When absent, `custom` specs throw
+   * `unsupported-animation`.
+   */
+  readonly resolveAnimation?: (type: string) => AnimationCompiler | undefined;
+}
+
+/**
+ * Compile-time context handed to a plugin {@link AnimationCompiler} (design.md
+ * §18). Exposes the same machinery the built-in compiler uses so custom kinds
+ * can read object definitions, resolve tween `from` values from the projection,
+ * patch the compile-time baseline, and mint stable ids.
+ */
+export interface CustomAnimationContext {
+  /** Absolute scene-time start (seconds) at which the animation is placed. */
+  readonly startTime: number;
+  readonly ids: IdGen;
+  readonly projection: Projection;
+  readonly getObject: (id: string) => IMObject | undefined;
+  readonly applyBaselinePatch?: (
+    targetId: string,
+    patch: RuntimeState2DPatch | RuntimeState3DPatch,
+  ) => void;
+}
+
+/**
+ * A plugin-registered compiler turning a `custom` {@link AnimationSpec} into
+ * seekable tracks (design.md §18). Registered under a `type` key in the
+ * animations registry; invoked by {@link compileSpec} when it meets a matching
+ * `custom` spec. The result must be pure/seekable like every built-in track.
+ */
+export interface AnimationCompiler {
+  /** Optional human-readable summary for tooling. */
+  readonly describe?: string;
+  /** Compile `spec` at `ctx.startTime` into tracks/signal-tracks/effects. */
+  compile(
+    spec: Extract<AnimationSpec, { kind: "custom" }>,
+    ctx: CustomAnimationContext,
+  ): CompileResult;
 }
 
 /** Result of compiling one spec subtree. */
@@ -104,9 +160,17 @@ export function createIdGen(): IdGen {
   return { next: (prefix) => `${prefix}-${n++}` };
 }
 
-function propertyChange(property: PropertyPath, value: unknown): RuntimeState2DPatch {
+function propertyChange(
+  property: PropertyPath,
+  value: unknown,
+): RuntimeState2DPatch | RuntimeState3DPatch {
   switch (property.type) {
     case "transform":
+      if (property.space === "3d") {
+        if (property.key === "position") return { transform: { position: value as AbsXYZ } };
+        if (property.key === "rotation") return { transform: { rotation: value as Quaternion } };
+        return { transform: { scale: normalizeScale3(value as Vec3 | number) } };
+      }
       if (property.key === "position") return { transform: { position: value as AbsXY } };
       if (property.key === "rotation") return { transform: { rotation: value as number } };
       return { transform: { scale: normalizeScale(value as Vec2 | number) } };
@@ -124,6 +188,21 @@ function propertyChange(property: PropertyPath, value: unknown): RuntimeState2DP
 function interpolateValue(property: PropertyPath, from: unknown, to: unknown, t: number): unknown {
   switch (property.type) {
     case "transform":
+      if (property.space === "3d") {
+        if (property.key === "rotation") {
+          return quatSlerp(from as Quaternion, to as Quaternion, t);
+        }
+        if (property.key === "position") {
+          const a = from as Vec3;
+          const b = to as Vec3;
+          return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)] as Vec3;
+        }
+        {
+          const a = normalizeScale3(from as Vec3 | number);
+          const b = normalizeScale3(to as Vec3 | number);
+          return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)] as Vec3;
+        }
+      }
       if (property.key === "rotation") return lerp(from as number, to as number, t);
       if (property.key === "position") {
         const a = from as Vec2;
@@ -214,7 +293,10 @@ export function compileSpec(
     }
     case "fade": {
       const property: PropertyPath = { type: "opacity" };
-      if (spec.from !== undefined) {
+      // Only seed global baseline opacity when the fade starts at t=0. A later
+      // fadeIn (e.g. after create → fadeOut) must not hide the object for the
+      // whole timeline — its `from` value applies when that track starts.
+      if (spec.from !== undefined && startTime <= 0) {
         context?.applyBaselinePatch?.(spec.targetId, { opacity: spec.from });
       }
       const from = spec.from ?? projection.read(spec.targetId, property);
@@ -250,6 +332,29 @@ export function compileSpec(
     }
     case "wait":
       return { tracks: [], signalTracks: [], effects: [], duration: spec.duration };
+    case "custom": {
+      const compiler = context?.resolveAnimation?.(spec.type);
+      if (!compiler) {
+        throw new IntermactError(
+          "unsupported-animation",
+          `No animation compiler registered for custom type "${spec.type}". Install a plugin that registers it (design.md §18).`,
+          spec,
+        );
+      }
+      const result = compiler.compile(spec, {
+        startTime,
+        ids,
+        projection,
+        getObject: (id) => context?.getObject(id),
+        ...(context?.applyBaselinePatch ? { applyBaselinePatch: context.applyBaselinePatch } : {}),
+      });
+      return {
+        tracks: result.tracks,
+        signalTracks: result.signalTracks,
+        effects: result.effects,
+        duration: result.duration ?? spec.duration,
+      };
+    }
     case "call":
       return {
         tracks: [],
@@ -327,8 +432,19 @@ export function compileSpec(
       const obj = context?.getObject(spec.targetId);
       const hasFill = Boolean(obj?.style?.fill) && obj && hasTrait(obj.traits, "fill");
       const layout = obj ? findTrait(obj.traits, "text-layout") : undefined;
+      const axesLayout = obj ? findTrait(obj.traits, "axes-layout") : undefined;
       let glyphWriteSpans: GlyphRevealSpan[] | undefined;
-      if (layout && spec.stroke?.mode !== "contour-parallel") {
+      const strokeMode: StrokeRevealMode =
+        spec.stroke?.mode ??
+        (layout
+          ? spec.stroke?.direction === "simultaneous"
+            ? "contour-parallel"
+            : "path-order"
+          : axesLayout
+            ? "sequential"
+            : "path-order");
+
+      if (layout && strokeMode !== "contour-parallel") {
         const direction = spec.stroke?.direction ?? "ltr";
         const order = layout.glyphOrder();
         const temporal = computeGlyphRevealSpans(
@@ -340,11 +456,21 @@ export function compileSpec(
         order.forEach((gi, i) => {
           glyphWriteSpans![gi] = temporal[i]!;
         });
+      } else if (axesLayout && strokeMode === "sequential") {
+        glyphWriteSpans = [
+          ...computeGlyphRevealSpans(
+            axesLayout.groupCount(),
+            spec.stroke?.glyphOverlap ?? 0,
+            "ltr",
+          ),
+        ];
       }
+
       context?.applyBaselinePatch?.(spec.targetId, {
         revealStart: 0,
         revealEnd: 0,
         fillProgress: hasFill ? 0 : 1,
+        strokeRevealMode: strokeMode,
         ...(glyphWriteSpans ? { glyphWriteSpans } : {}),
       });
       const tracks: Track[] = [];
@@ -390,14 +516,22 @@ export function compileSpec(
       return { tracks, signalTracks: [], effects: [], duration: spec.duration };
     }
     case "morph": {
-      const source = context?.getObject(spec.targetId);
-      if (!source) {
+      const sourceObj = context?.getObject(spec.targetId);
+      if (!sourceObj) {
         throw new IntermactError(
           "unsupported-animation",
           `Morph source object "${spec.targetId}" was not found at compile time.`,
           spec,
         );
       }
+      if (sourceObj.dimension !== "2d") {
+        throw new IntermactError(
+          "unsupported-animation",
+          `Morph is only supported for 2D objects (target "${spec.targetId}").`,
+          spec,
+        );
+      }
+      const source: IMObject2D = sourceObj;
       const easeFn = resolveEasing(spec.easing ?? "linear");
       const sampleCount = spec.sampleCount ?? 64;
 

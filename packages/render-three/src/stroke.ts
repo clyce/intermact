@@ -1,17 +1,20 @@
 import { BufferAttribute, BufferGeometry } from "three";
 import {
+  contourTotalLength,
   cumulativeLengths,
   glyphLocalReveal,
   pointAtDistance,
   type GlyphRevealSpan,
   type SampledContour2D,
   type SampledPath2D,
+  type StrokeRevealMode,
 } from "@intermact/core";
 
-/** Per-glyph sequential stroke reveal (text `write()`). */
+/** Per-glyph / per-group sequential stroke reveal (text `write()`, axes `create`). */
 export interface StrokeRevealOptions {
   readonly contourGlyphIndex?: readonly number[];
   readonly glyphWriteSpans?: readonly GlyphRevealSpan[];
+  readonly mode?: StrokeRevealMode;
 }
 
 /**
@@ -35,6 +38,11 @@ export function buildStrokeGeometry(
   const positions: number[] = [];
   const halfWidth = Math.max(width, 1e-5) / 2;
 
+  const mode = revealOpts?.mode ?? "path-order";
+  const globalStartDist = revealStart * path.totalLength;
+  const globalEndDist = revealEnd * path.totalLength;
+  let pathOffset = 0;
+
   path.contours.forEach((contour, ci) => {
     let localStart = revealStart;
     let localEnd = revealEnd;
@@ -47,6 +55,20 @@ export function buildStrokeGeometry(
       } else {
         localStart = 0;
         localEnd = 0;
+      }
+    } else if (mode === "path-order" && path.totalLength > 0) {
+      const contourLen = contourTotalLength(contour);
+      const seg0 = pathOffset;
+      const seg1 = pathOffset + contourLen;
+      pathOffset = seg1;
+      const visStart = Math.max(globalStartDist, seg0);
+      const visEnd = Math.min(globalEndDist, seg1);
+      if (visEnd <= visStart || contourLen <= 0) {
+        localStart = 0;
+        localEnd = 0;
+      } else {
+        localStart = (visStart - seg0) / contourLen;
+        localEnd = (visEnd - seg0) / contourLen;
       }
     }
     const pts = trimContour(contour, localStart, localEnd);

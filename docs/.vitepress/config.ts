@@ -63,6 +63,19 @@ export default defineConfig({
             { text: "布局与 Inspector", link: "/guide/layout-inspector" },
           ],
         },
+        {
+          text: "PCG 演示系统（v1.0）",
+          items: [
+            { text: "程序化生成（PCG）", link: "/guide/pcg" },
+            { text: "3D 场景与相机", link: "/guide/3d" },
+            { text: "导出、分享与嵌入", link: "/guide/export-embed" },
+            { text: "性能与大数据", link: "/guide/performance" },
+          ],
+        },
+        {
+          text: "扩展系统（v0.7）",
+          items: [{ text: "插件与注册表", link: "/guide/extensibility" }],
+        },
       ],
       "/reference/": [
         {
@@ -86,6 +99,7 @@ export default defineConfig({
             { text: "路线图与里程碑", link: "/project/roadmap" },
             { text: "v0.1 验收清单", link: "/project/v01-checklist" },
             { text: "v0.2 验收清单", link: "/project/v02-checklist" },
+            { text: "v1.0 验收清单", link: "/project/v1-checklist" },
           ],
         },
       ],
@@ -103,7 +117,7 @@ export default defineConfig({
       },
     ],
     footer: {
-      message: "Intermact v0.1 — Phase-1 MVP",
+      message: "Intermact v1.0 — 文档覆盖 Phase-1 / Phase-2 / Phase-3（全阶段）",
       copyright: "MIT License",
     },
     search: {

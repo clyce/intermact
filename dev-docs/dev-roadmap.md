@@ -453,6 +453,8 @@ gantt
 
 **阶段目标**：补齐 3D，引入程序化/生成式内容与数据驱动生成，打通序列化/导出/嵌入与性能，成为可分享、可嵌入、可扩展的完整平台。
 
+**评审与清偿**（2026-06-10）：Phase-3 系统性代码评审、裁决台账与逐项清偿见 [`phase-3-review.md` §13](./phase-3-review.md#13-phase-3-代码评审code-review--2026-06-10)（§13.11 清偿记录表 P0–P3 全部 ✅；"实现更优"偏差固化于 `design.md §0.3.1`）。
+
 ### M13 · PCG 核心
 
 - **目标**：Field/Sampler、参数/晶格、L-system/fractal/graph/CA、数据驱动、组合算子、种子化 RNG（`design.md §6`）。
@@ -468,6 +470,8 @@ gantt
   - `examples/pcg/data-driven-bars` — `mapData/barChart` 数据驱动生成 + key 复用。
   - `examples/pcg/fractal-graph` — 分形与图布局（force/tree/circular）。
 
+> **状态**：已完成（2026-06）。新增 headless `packages/core/src/pcg/` 层（`field`/`marching-squares`/`field-objects`/`parametric`/`lsystem`/`fractal`/`graph`/`cellular-automaton`/`data`/`operators`，多边形布尔在 `geometry/boolean.ts`）；depcruise 增设 `pcg-headless-deps` 规则。6 个示例全部注册到 `examples/src/pcg/`。`pnpm run ci` 全绿（**179** tests，含 `pcg.test.ts` 27 项确定性/算法用例），四包 `VERSION` 升至 `0.3.0`。具体化/偏差（`repeat`→`repeatObject`、`isosurface` 顺延 M14、`heatmap` 走逐格填色通道、`instanceField`/`booleanOp` 适用范围）见 `phase-3-review.md §13.1` 与 `design.md §0.3`。
+
 ### M14 · 3D 全量
 
 - **目标**：3D 对象与相机动画（`design.md §5.3、§10.1`）。
@@ -481,6 +485,8 @@ gantt
   - `examples/3d/isosurface` — marching cubes 等值面。
   - `examples/3d/camera-moves` — 相机 orbit/dolly/zoom 与四元数旋转。
   - `examples/3d/nested-scene-panel` — 3D 子场景作为 2D 面板嵌入（`design.md §19.5`）。
+
+> **状态**：已完成（2026-06，v0.4.0）。并行扩出 3D 管线（`math/quaternion`、`runtime` 联合化、`object3d/factories`、`geometry/provider3d`+`marching-cubes`、`scene/scene3d`+`registered-object-3d`+`camera3d`+`empty3d`、`pcg/isosurface`），动画/Player/storyboard 泛化为 2D\|3D；`render-three` 3D 视图 + `ThreeSceneView` 维度分发，`render-r3f` `SceneView3D`（透视 + 内置 orbit/dolly）+ `RenderedScene`（离屏渲染目标）。相机入场景关闭 v0.1 延期。5 个示例（`3d/surface-plot`、`3d/training-trajectory`、`3d/isosurface`、`3d/camera-moves`、`3d/nested-scene-panel`）注册到 `examples/src/3d/`。`pnpm run ci` 全绿（**205** tests，新增四元数/3D 工厂/world-transform/marching-cubes/Player-3D/相机/渲染视图 26 项），四包 `VERSION` 升至 `0.4.0`。具体化/偏差（marching-tetrahedra 变体、`LineSegments` 折线、交互/脚本相机互斥、`RenderedScene` clearColor 保护）见 `phase-3-review.md §13.2` 与 `design.md §0.3`。
 
 ### M15 · 序列化 / 导出 / 嵌入
 
@@ -501,6 +507,8 @@ gantt
   - `examples/embed/web-component` — 作为 web component / iframe 嵌入静态页。
   - `examples/export/semantic-handout` — 带超链接/旁注的讲义页，尊重 `prefers-reduced-motion`。
 
+> **状态**：已完成（2026-06，v0.5.0）。新增 headless `packages/core/src/serialize/`（`types`/`bake`/`timeline`/`serialize`/`share-url`/`frame-hash`/`svg`/`reduced-motion`/`semantic`）：`serialize(player)`/`deserialize` 经 **op-log 重放 + 烘焙几何 + pristine 初值** 复原等价 Player（不重跑用户程序），契约以"定帧帧哈希逐帧相等"（2D/3D/morph）校验。Phase-1 序列化债全部了结或显式降级：`EasingFn`→命名 easing（degrade `linear` / strict 抛错）、`morph.toObject`→烘焙、`call`→丢弃/抛错、reactive 信号→数字 id 持久化重建（派生闭包不序列化，见偏差）。浏览器侧 `@intermact/react` 增 `SerializedCanvas`/`<intermact-embed>`（`defineIntermactEmbed`）/`recordCanvasVideo`/`SemanticOverlay`/`usePrefersReducedMotion`（新增 `react-dom` peer/dev）。4 个示例（`export/share-url`、`export/video-render`、`embed/web-component`、`export/semantic-handout`）注册到 `examples/src/`。`pnpm run ci` 全绿（**216** tests，新增 `serialize.test.ts` 11 项），四包 `VERSION` 升至 `0.5.0`。具体化/偏差（op-log+pristine、烘焙降级、派生不序列化、SVG 为 2D headless、3D 相机随工程、`react-dom` 依赖）见 `phase-3-review.md §13.3` 与 `design.md §0.3`。
+
 ### M16 · 性能与大数据
 
 - **目标**：instancing、Worker、Float32Array 通道、大规模数据流（`design.md §15.2`）。
@@ -512,6 +520,8 @@ gantt
   - `examples/perf/instanced-10k` — 万级实例化对象维持目标帧率。
   - `examples/perf/large-pointcloud` — 大点云/大网格流式加载与渲染。
   - `examples/perf/worker-sampling` — Worker 化采样/三角化前后帧时间对比基准。
+
+> **状态**：已完成（2026-06，v0.6.0）。§15.2 性能策略落到热路径：采样 memoize（`geometry/memoize.ts` 接入 provider，按 `(object, geometryVersion, opts)` 命中返回同引用）；真正 GPU 实例化（`InstancedTrait` 携带 base 几何 + 逐实例变换，`render-three/object-view-instanced.ts` 用 `InstancedMesh`，替换 M13 烘焙组回退）；Player 轨道区间剪枝（`applyAt` 对 start 升序轨道二分，只评估活动窗口）；Worker 化纯任务（`render-three/worker/`：`resample`/`triangulate`/`marching-cubes`/`parse-svg-path`，core 保持 DOM-free，`marching-cubes` 拆出可序列化 `marchingCubesField`，无 Worker 同步回退）；性能预算基准纳入 `vitest run`（`core/perf/perf-budget.test.ts`）+ `pnpm run bench`。3 个示例（`perf/instanced-10k`、`perf/large-pointcloud`、`perf/worker-sampling`）注册到 `examples/src/perf/`。`pnpm run ci` 全绿（**233** tests，新增 memoize/instancing/worker/perf-budget 17 项），四包 `VERSION` 升至 `0.6.0`。具体化/偏差（实例化双轨、memoize 落 provider 层、剪枝仅剪未开始尾部、Worker 纯任务子集、点云单色）见 `phase-3-review.md §13.4` 与 `design.md §0.3`。
 
 ### M17 · 扩展性 / 插件
 
@@ -525,11 +535,17 @@ gantt
   - `examples/plugin/custom-generator` — 插件式新增一个 PCG 生成器。
   - `examples/plugin/webgpu-backend`（可选）— 注册 WebGPU 渲染后端 PoC。
 
+> **状态**：已完成（2026-06，v0.7.0）。新增 headless `packages/core/src/extend/`（`registry`/`types`/`registries`/`plugin`）落地 §18 注册表式扩展：泛型 `Registry<K,V>`（重复键 `plugin-error`，`override`/`require`/`unregister`）、四类 descriptor（`ObjectTypeDescriptor`/`AnimationCompiler`/`GeneratorDescriptor`/`RendererFactory`）、`createRegistries()` + 进程级 `globalRegistries`、`definePlugin`/`installPlugin` + 分发助手（`createRegisteredObject`/`runGenerator`/`selectRenderer`）。自定义动画经"全局注册表 + 注入解析器"接线：`spec.ts` 增 `custom` 项、`compileSpec` 增 `custom` 分支（`context.resolveAnimation`）、`StoryboardBuilder` 默认指向 `globalRegistries.animations`、`orchestration.ts` 增 `customAnimation()`，故 `scene.play(customAnimation(...))` 无需改 scene/program 调用点；序列化（`SerializedSpec`/bake/unbake/reduced-motion）覆盖 `custom`。3 个示例（`plugin/custom-object` 注册 gear 对象+spin 动画、`plugin/custom-generator` 注册 phyllotaxis 生成器、`plugin/webgpu-backend` 注册 `webgpu`/`webgl` `RendererFactory` PoC）注册到 `examples/src/plugin/`。退出标准达成：端到端用例证明"插件新增对象类型+生成器+动画 kind 不改 core 即生效"。`pnpm run ci` 全绿（**243** tests，新增 `extend/extend.test.ts` 10 项），四包 `VERSION` 升至 `0.7.0`。具体化/偏差（解析器函数注入避免环、对象注册表与 trait 模型互补、WebGPU 为占位 PoC、install 幂等）见 `phase-3-review.md §13.5` 与 `design.md §0.3`。
+
 ### ◆ v1.0 发布（DoD）
 
 - 示例：PCG（L-system 生长、向量场/流线、数据驱动图表）、3D 损失曲面、嵌套渲染、可分享 URL。
 - 序列化/导出/嵌入可用；性能基准达标；插件机制可用。
 - API 文档（TypeDoc）、示例库、迁移/稳定性说明齐备。
+
+> **状态**：已完成（2026-06，v1.0.0）。Phase-3（M13–M17）全部 ✅。`pnpm run ci` 全绿（lint + typecheck + tests + depcruise 0 违规 + build 四包 ESM+DTS）；21 个 P3 示例（`pcg/*`×6、`3d/*`×5、`export/embed/*`×4、`perf/*`×3、`plugin/*`×3）经 `pnpm --filter @intermact/examples run build` 产物化可运行；性能预算（`core/perf/perf-budget.test.ts`）纳入 CI；插件机制以"新增对象类型+生成器+动画 kind 不改 core 即生效"端到端用例验证。四库包（`core`/`react`/`render-three`/`render-r3f`）`VERSION`/`package.json` 升至 `1.0.0`；API Reference 经 `pnpm run gen:reference`（TypeDoc）重生。在线验收清单：`docs/project/v1-checklist.md`。各里程碑评审见 `phase-3-review.md §13.1–§13.5`，实现日志见 `design.md §0.3`。验收时实测 243 tests / 199 模块。
+>
+> **评审清偿（2026-06-10，v1.0.x）**：按 `phase-3-review.md §13` 系统清偿（清偿记录见 §13.11）。代码补齐 M14 `RenderedScene` core 化 + 多视口 `rect` 渲染、M17 registries 注入化 + 字体注册表作用域化、3D 管线补完、序列化稳健化与 **GIF/iframe/SVG 定帧导出交付**（关闭 M15「GIF/iframe 未交付」缺口）；正确性修复（PCG 无 RNG fail-fast、`stitchSegments` 双向闭合、InstancedMesh 剔除/morph override）；新增 5 个示例（`pcg/operators-showcase`/`data-charts`/`generators-extra`、`export/svg-snapshot`、`3d/grouping`）+ `cellular-automaton` 补 2D 生命游戏，新增 4 篇专题指南（`guide/pcg`/`3d`/`export-embed`/`performance`）。清偿后 `pnpm run ci` 全绿——**40 文件 / 296 用例**、depcruise **210 模块 0 违规**、四包构建通过，`gen:reference` + `build:site` 校验通过。
 
 ## 7. 贯穿性工作流（不计入单一里程碑，持续推进）
 

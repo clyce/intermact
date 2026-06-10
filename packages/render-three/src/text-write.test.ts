@@ -12,6 +12,7 @@ import {
   textObject,
   xy,
   type IMObject2D,
+  type RuntimeState2D,
 } from "@intermact/core";
 import type { Mesh } from "three";
 import { loadTestFont } from "../../core/src/text/test-font";
@@ -61,7 +62,7 @@ describe("text write rendering (M3)", () => {
     const { player } = await buildProgram(program);
     player.seek(1.2);
     const render = player.getSnapshot().objects.get(lineId)!;
-    expect(render.state.fillProgress).toBeCloseTo(1, 5);
+    expect((render.state as RuntimeState2D).fillProgress).toBeCloseTo(1, 5);
     expect(render.object.style?.fill).toBe("#a78bfa");
     const fill = findTrait(render.object.traits, "fill");
     expect(fill?.contours().length).toBeGreaterThan(0);
@@ -98,7 +99,7 @@ describe("text write rendering (M3)", () => {
     const { player } = await buildProgram(program);
     player.seek(0.6);
     const render = player.getSnapshot().objects.get(seqId)!;
-    const spans = render.state.glyphWriteSpans;
+    const spans = (render.state as RuntimeState2D).glyphWriteSpans;
     expect(spans?.length).toBe(3);
     const layout = findTrait(render.object.traits, "text-layout");
     const contourGlyphIndex = layout?.contourGlyphIndex() ?? [];
@@ -183,7 +184,7 @@ describe("text write rendering (M3)", () => {
     const { player } = await buildProgram(program);
     player.seek(0.2);
     const render = player.getSnapshot().objects.get(seqId)!;
-    const spans = render.state.glyphWriteSpans!;
+    const spans = (render.state as RuntimeState2D).glyphWriteSpans!;
     const layout = findTrait(render.object.traits, "text-layout");
     const contourGlyphIndex = layout!.contourGlyphIndex();
     const path = findTrait(render.object.traits, "stroke")!.samplePath();
@@ -192,7 +193,9 @@ describe("text write rendering (M3)", () => {
       contourGlyphIndex,
       glyphWriteSpans: spans,
     });
-    const expectedSim = buildStrokeGeometry(path, 0.03, 0, revealEnd);
+    const expectedSim = buildStrokeGeometry(path, 0.03, 0, revealEnd, {
+      mode: "contour-parallel",
+    });
     expect(expectedLtr.getAttribute("position").count).toBeLessThan(
       expectedSim.getAttribute("position").count,
     );

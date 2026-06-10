@@ -40,6 +40,32 @@ import { ExplorableDerivativeDemo } from "./interaction/explorable-derivative";
 import { NextToArrangeDemo } from "./layout/next-to-arrange";
 import { ResponsiveRectDemo } from "./layout/responsive-rect";
 import { InspectorTourDemo } from "./devtools/inspector-tour";
+import { LSystemPlantDemo } from "./pcg/lsystem-plant";
+import { ScalarFieldIsolinesDemo } from "./pcg/scalar-field-isolines";
+import { VectorFieldStreamlinesDemo } from "./pcg/vector-field-streamlines";
+import { CellularAutomatonDemo } from "./pcg/cellular-automaton";
+import { DataDrivenBarsDemo } from "./pcg/data-driven-bars";
+import { FractalGraphDemo } from "./pcg/fractal-graph";
+import { OperatorsShowcaseDemo } from "./pcg/operators-showcase";
+import { DataChartsDemo } from "./pcg/data-charts";
+import { GeneratorsExtraDemo } from "./pcg/generators-extra";
+import { SurfacePlot3DDemo } from "./3d/surface-plot";
+import { TrainingTrajectory3DDemo } from "./3d/training-trajectory";
+import { Isosurface3DDemo } from "./3d/isosurface";
+import { CameraMoves3DDemo } from "./3d/camera-moves";
+import { NestedScenePanel3DDemo } from "./3d/nested-scene-panel";
+import { Grouping3DDemo } from "./3d/grouping";
+import { ShareUrlExportDemo } from "./export/share-url";
+import { VideoRenderExportDemo } from "./export/video-render";
+import { WebComponentEmbedDemo } from "./embed/web-component";
+import { SemanticHandoutExportDemo } from "./export/semantic-handout";
+import { SvgSnapshotExportDemo } from "./export/svg-snapshot";
+import { Instanced10kDemo } from "./perf/instanced-10k";
+import { LargePointcloudDemo } from "./perf/large-pointcloud";
+import { WorkerSamplingDemo } from "./perf/worker-sampling";
+import { CustomObjectPluginDemo } from "./plugin/custom-object";
+import { CustomGeneratorPluginDemo } from "./plugin/custom-generator";
+import { WebGpuBackendPluginDemo } from "./plugin/webgpu-backend";
 
 /** A single runnable demo entry shown in the gallery sidebar. */
 export interface DemoEntry {
@@ -55,6 +81,12 @@ export interface DemoEntry {
   readonly caption: ReactNode;
   /** Where to place the caption when it would cover content. */
   readonly captionPlacement?: "top" | "bottom";
+  /**
+   * Repo-relative source path for the "View source" link. Defaults to
+   * `examples/src/<id>.tsx`; set explicitly when the file path diverges from the
+   * routing id (e.g. an L1 gate reusing another demo's component).
+   */
+  readonly source?: string;
 }
 
 function entry(
@@ -64,8 +96,14 @@ function entry(
   Component: ComponentType,
   caption: ReactNode,
   captionPlacement?: "top" | "bottom",
+  source?: string,
 ): DemoEntry {
-  return { id, title, group, Component, caption, captionPlacement };
+  return { id, title, group, Component, caption, captionPlacement, source };
+}
+
+/** Repo-relative source path for a demo's "View source" link. */
+export function demoSourcePath(demo: DemoEntry): string {
+  return demo.source ?? `examples/src/${demo.id}.tsx`;
 }
 
 /**
@@ -388,6 +426,188 @@ export const demos: readonly DemoEntry[] = [
     "M12 / §16: Inspector shows registry objects, runtime transforms, active tracks, reactive signals/derived, and SVG bounds overlay.",
   ),
   entry(
+    "pcg/lsystem-plant",
+    "L-system plant",
+    "pcg",
+    LSystemPlantDemo,
+    "M13 / §6.4: a bracketed L-system plant with seeded per-branch angle jitter. Create reveals branches in growth order; same seed ⇒ same plant.",
+  ),
+  entry(
+    "pcg/scalar-field-isolines",
+    "Scalar field iso-lines",
+    "pcg",
+    ScalarFieldIsolinesDemo,
+    "M13 / §6.2: sin(x)·cos(y) as a color-mapped heatmap (per-cell fill) with marching-squares iso-lines layered on top.",
+  ),
+  entry(
+    "pcg/vector-field-streamlines",
+    "Vector field streamlines",
+    "pcg",
+    VectorFieldStreamlinesDemo,
+    "M13 / §6.2: a swirl vector field shown as an arrow grid with RK4-integrated streamlines seeded on a ring.",
+  ),
+  entry(
+    "pcg/cellular-automaton",
+    "Cellular automaton (Rule 30 + Life)",
+    "pcg",
+    CellularAutomatonDemo,
+    "M13 / §6.4: Wolfram Rule 30 as a static space-time diagram (left) plus a 2D Game of Life soup (right) driven by cellularAutomatonFrames — one object per generation, cross-faded along the timeline. Both fully deterministic.",
+  ),
+  entry(
+    "pcg/data-driven-bars",
+    "Data-driven bars",
+    "pcg",
+    DataDrivenBarsDemo,
+    "M13 / §6.5: a bar chart + trend line from one data array. Bars keep one keyed part per datum for later data-update matching.",
+  ),
+  entry(
+    "pcg/fractal-graph",
+    "Fractal + force graph",
+    "pcg",
+    FractalGraphDemo,
+    "M13 / §6.4, §6.6: a Sierpinski fractal and a seeded force-directed graph, both positioned via the transformObject operator.",
+  ),
+  entry(
+    "pcg/operators-showcase",
+    "Operators showcase",
+    "pcg",
+    OperatorsShowcaseDemo,
+    "M13 / §6.6: the composition operators chained as pure IMObject2D → IMObject2D — repeatObject (compounding step), booleanOp (polygon subtract), mapPoints (per-point warp), and along (distribute + orient on a path), each placed with transformObject.",
+  ),
+  entry(
+    "pcg/data-charts",
+    "Data charts (scatter + mapData)",
+    "pcg",
+    DataChartsDemo,
+    "M13 / §6.5: scatter markers and a lineChart trend share one data array (aligned via linearScale); mapData builds a bubble row of keyed group parts so a later data update could pair them with transformMatching.",
+  ),
+  entry(
+    "pcg/generators-extra",
+    "Generators extra (tiling / lattice / tree / rose)",
+    "pcg",
+    GeneratorsExtraDemo,
+    "M13 / §6.3–§6.4: four more pure generators — hexagonal tiling, a lattice with node dots, a recursiveTree, and a closed parametricCurve2D rose — each positioned with transformObject.",
+  ),
+  entry(
+    "3d/surface-plot",
+    "3D surface plot",
+    "3d",
+    SurfacePlot3DDemo,
+    "M14 / §5.3, §10: a parametric surface z = sin(x)·cos(y) meshed over a (u,v) grid with 3D axes. Drag to orbit, wheel to dolly; Create reveals the mesh.",
+  ),
+  entry(
+    "3d/training-trajectory",
+    "Training trajectory (§19.3)",
+    "3d",
+    TrainingTrajectory3DDemo,
+    "M14 / §19.3: gradient descent on a two-basin loss landscape — a translucent surface with the optimizer path traced as a 3D curve and sampled step points.",
+  ),
+  entry(
+    "3d/isosurface",
+    "Isosurface (marching cubes)",
+    "3d",
+    Isosurface3DDemo,
+    "M14 / §6: marching-cubes extraction of the f = 0 level set of a two-blob metaball field into a watertight mesh. Same field + resolution ⇒ same surface.",
+  ),
+  entry(
+    "3d/camera-moves",
+    "Camera moves (registered camera)",
+    "3d",
+    CameraMoves3DDemo,
+    "M14 / §10.1: the camera is part of the timeline — orbit, dolly, lookAt, and moveTo are seekable quaternion tweens. Interaction off so the scripted path drives the view.",
+  ),
+  entry(
+    "3d/nested-scene-panel",
+    "Nested scene panel (§10.2)",
+    "3d",
+    NestedScenePanel3DDemo,
+    "M14 / §10.2, §19.5: the core render(scene, camera) API composes an independent animated sub-scene as a registerable rendered-scene object. SceneView auto-composites it into an offscreen render target; it is framed and faded in like any other object.",
+  ),
+  entry(
+    "3d/grouping",
+    "3D grouping (group3D)",
+    "3d",
+    Grouping3DDemo,
+    "M14 / §9.3, §10: Scene3D.group3D parents three cubes and a closed polyline3D ring under one empty node; rotating only the group handle orbits the whole assembly as the Player composes world transforms down the hierarchy.",
+  ),
+  entry(
+    "export/share-url",
+    "Share-URL round-trip",
+    "export",
+    ShareUrlExportDemo,
+    "M15 / §17: the scene is serialized, encoded as a URL-safe string, then rebuilt and mounted from the decoded payload — a figure that travels as a link, no source needed.",
+  ),
+  entry(
+    "export/video-render",
+    "Video render (WebM)",
+    "export",
+    VideoRenderExportDemo,
+    "M15 / §17: record the live GL canvas to a downloadable WebM via MediaRecorder. The deterministic, headless export (fixed-fps frame hashes / SVG) lives in core; this is the browser encode path.",
+  ),
+  entry(
+    "embed/web-component",
+    "Web component embed",
+    "embed",
+    WebComponentEmbedDemo,
+    "M15 / §17: a framework-agnostic <intermact-embed> custom element mounts a serialized scene from a share-url string — the drop-in distribution surface for any page or iframe.",
+  ),
+  entry(
+    "export/semantic-handout",
+    "Semantic handout + reduced motion",
+    "export",
+    SemanticHandoutExportDemo,
+    "M15 / §17: object metadata (label/href/a11yLabel) becomes a focusable, linkable semantic overlay and side handout. Toggle reduced motion to show the prefers-reduced-motion degrade (final frame, no animation).",
+  ),
+  entry(
+    "export/svg-snapshot",
+    "SVG snapshot + deterministic frames",
+    "export",
+    SvgSnapshotExportDemo,
+    "M15 / §17: the headless export path — buildProgram yields a DOM/GL-free Player, snapshotToSVG emits a standalone SVG per fixed-time frame, and sampleFrameHashes proves the fixed-fps timeline hashes identically every run (the basis for golden-frame tests).",
+  ),
+  entry(
+    "perf/instanced-10k",
+    "Instanced 10k",
+    "perf",
+    Instanced10kDemo,
+    "M16 / §15.2: 10,000 dots from instanceField drawn with one three.js InstancedMesh (one geometry, 10k instance matrices) — real GPU instancing replacing the baked-group fallback.",
+  ),
+  entry(
+    "perf/large-pointcloud",
+    "Large point cloud (60k)",
+    "perf",
+    LargePointcloudDemo,
+    "M16 / §15.2: a 60,000-point spiral galaxy streamed through the Float32Array buffer channel; Create reveals it by trimming the draw range, with no per-frame geometry churn.",
+  ),
+  entry(
+    "perf/worker-sampling",
+    "Worker sampling",
+    "perf",
+    WorkerSamplingDemo,
+    "M16 / §15.2: marching-cubes polygonization run on the main thread vs. an offloaded Worker. core stays DOM-free; the worker glue (protocol/kernel/client) lives in render-three.",
+  ),
+  entry(
+    "plugin/custom-object",
+    "Plugin: custom object + animation",
+    "plugin",
+    CustomObjectPluginDemo,
+    "M17 / §18: a plugin registers a new object type (gear) and a new animation kind (spin) into the registries. installPlugin wires both through the build pass — no core edits. Two meshing gears Create on, then spin via the plugin animation.",
+  ),
+  entry(
+    "plugin/custom-generator",
+    "Plugin: custom generator",
+    "plugin",
+    CustomGeneratorPluginDemo,
+    "M17 / §18: a plugin registers a PCG generator (golden-angle phyllotaxis). runGenerator dispatches by name through the registries; randomness flows through the seeded rng so the same seed reproduces the sunflower head.",
+  ),
+  entry(
+    "plugin/webgpu-backend",
+    "Plugin: WebGPU backend (PoC)",
+    "plugin",
+    WebGpuBackendPluginDemo,
+    "M17 / §18: a render backend is just a registered RendererFactory. The plugin registers webgpu (feature-detected) + webgl; selectRenderer picks the first supported one. Overlay shows the selection; the scene draws via the default WebGL path.",
+  ),
+  entry(
     "l1/basic-2d",
     "L1 · Basic 2D (§19.1)",
     "l1",
@@ -400,5 +620,7 @@ export const demos: readonly DemoEntry[] = [
     "l1",
     LevaBindingDemo,
     "L1 acceptance (§19.2): Leva amplitude/frequency sliders drive Signals; the sine curve and label recompute without rebuilding the program.",
+    undefined,
+    "examples/src/reactive/leva-binding.tsx",
   ),
 ];

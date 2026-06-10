@@ -1,5 +1,6 @@
 import {
   setDefaultFont,
+  setMathTickFont,
   type IntermactProgram,
   type IntermactProgramContext,
 } from "@intermact/core";
@@ -11,6 +12,7 @@ export async function loadDemoFonts(ctx: IntermactProgramContext) {
   const sans = await ctx.assets.font(dejavuSansUrl);
   const serif = await ctx.assets.font(dejavuSerifUrl);
   setDefaultFont(sans.family);
+  setMathTickFont(serif.family);
   return { sans, serif };
 }
 

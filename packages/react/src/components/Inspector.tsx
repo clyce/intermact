@@ -41,7 +41,8 @@ export function Inspector({
     return () => ro.disconnect();
   }, []);
 
-  const domain = scene.props.domain;
+  const domain: { x: readonly [number, number]; y: readonly [number, number] } =
+    scene.kind === "scene-2d" ? scene.props.domain : { x: [-1, 1], y: [-1, 1] };
   const project = useMemo(() => {
     const dw = domain.x[1] - domain.x[0];
     const dh = domain.y[1] - domain.y[0];
@@ -74,7 +75,7 @@ export function Inspector({
 
   const boundsOverlay = showBounds
     ? rows.flatMap((r) => {
-        if (r.object.dimension !== "2d") return [];
+        if (r.object.dimension !== "2d" || r.state.dimension !== "2d") return [];
         const obj = r.object as IMObject2D;
         const wb = transformBounds(obj.geometry.getBounds(), r.state.transform);
         const [x0, y0] = project(wb.min[0], wb.max[1]);
@@ -181,7 +182,11 @@ export function Inspector({
                     {fmt(t.scale[0])},{fmt(t.scale[1])}
                   </td>
                   <td style={cell}>{fmt(r.state.opacity)}</td>
-                  <td style={cell}>{t.zIndex}</td>
+                  <td style={cell}>
+                    {r.state.dimension === "2d"
+                      ? r.state.transform.zIndex
+                      : r.state.transform.renderOrder}
+                  </td>
                 </tr>
               );
             })}

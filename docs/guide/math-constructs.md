@@ -2,7 +2,7 @@
 
 数理构件层（`design.md §7.4`）在 [Scale](/guide/scale) 与坐标系之上，提供 Manim 风格但可交互的数理对象。所有构件都是纯函数，产出单个 `IMObject2D`（内部自带全部 contour），可无头运行，并通过 `RegisteredObject2D` 的标准动画 API（`create`/`fadeIn`/…）显隐。
 
-> **数字标签**：当前轴刻度、矩阵/表格条目与 `decimalNumber` 使用 7-段笔画字形（`packages/core/src/text/seven-segment.ts`）作为过渡渲染。真实字体/LaTeX 在 M10 升级，这是里程碑边界而非降级。
+> **数字与标签**：轴刻度、矩阵/表格条目与 `decimalNumber` 使用 OpenType 轮廓字形（与 [文本与 LaTeX 管线](/guide/text-latex) 同一字体栈）。公式与长文本请用 `textObject` / `layoutMathJaxLatex`。
 
 ## 坐标系构件
 

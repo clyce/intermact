@@ -24,6 +24,21 @@ export function rawContourFromPoints(points: readonly AbsXY[], closed: boolean):
   return { points: flat, closed };
 }
 
+/**
+ * Approximate a circle as `segments` evenly-spaced points (no closing duplicate;
+ * pair with a `closed: true` contour). Shared by PCG dot/disk markers
+ * (scatter/graph nodes/IFS orbits/lattice dots) so the "N-gon ≈ circle" snippet
+ * lives in one place (design.md §13.6.1 DRY).
+ */
+export function approxCircle(center: AbsXY, radius: number, segments: number): AbsXY[] {
+  const out: AbsXY[] = [];
+  for (let i = 0; i < segments; i++) {
+    const a = (i / segments) * Math.PI * 2;
+    out.push(xy(center[0] + radius * Math.cos(a), center[1] + radius * Math.sin(a)));
+  }
+  return out;
+}
+
 /** Number of points in a flat interleaved buffer. */
 export function pointCount(points: Float32Array): number {
   return points.length >> 1;

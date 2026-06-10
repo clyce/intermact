@@ -29,43 +29,47 @@ const program = createProgram(async (ctx) => {
 
 export function MarkersSlidesDemo() {
   return (
-    <div style={{ padding: 24 }}>
-      <h2 style={{ marginTop: 0 }}>Markers &amp; slides</h2>
-      <p style={{ color: "#94a3b8", maxWidth: 640 }}>
-        Each marker is a chapter bookmark. Click one to <code>jumpToMarker</code> �?slide-style
-        presentation navigation built on the same seekable timeline.
-      </p>
-      <div style={{ height: "100%" }}>
-        <DemoCanvas
-          program={program}
-          controls={{ timeline: true }}
-          chrome={(built) => {
-            const markers = built.player.storyboard.markers;
-            return (
-              <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-                {markers.map((m) => (
-                  <button
-                    key={m.name}
-                    onClick={() => built.player.jumpToMarker(m.name)}
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: 6,
-                      border: "1px solid #334155",
-                      background: "#1e293b",
-                      color: "#e2e8f0",
-                      cursor: "pointer",
-                      font: "inherit",
-                      fontSize: 13,
-                    }}
-                  >
-                    {m.name} · {m.time.toFixed(1)}s
-                  </button>
-                ))}
-              </div>
-            );
-          }}
-        />
-      </div>
+    <div style={{ height: "100%" }}>
+      <DemoCanvas
+        program={program}
+        skipFonts
+        controls={{ timeline: true }}
+        chrome={(built) => {
+          const markers = built.player.storyboard.markers;
+          return (
+            <div
+              style={{
+                position: "absolute",
+                top: 8,
+                left: 8,
+                zIndex: 2,
+                display: "flex",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              {markers.map((m) => (
+                <button
+                  key={m.name}
+                  onClick={() => built.player.jumpToMarker(m.name)}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    border: "1px solid #334155",
+                    background: "#1e293b",
+                    color: "#e2e8f0",
+                    cursor: "pointer",
+                    font: "inherit",
+                    fontSize: 13,
+                  }}
+                >
+                  {m.name} · {m.time.toFixed(1)}s
+                </button>
+              ))}
+            </div>
+          );
+        }}
+      />
     </div>
   );
 }

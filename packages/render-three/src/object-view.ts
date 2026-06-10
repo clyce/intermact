@@ -6,9 +6,9 @@ import {
   glyphLocalFill,
   isGlyphWriteComplete,
   type IMObject2D,
-  type LineWidth,
   type ObjectRenderState,
   type ObjectStyle,
+  type RuntimeState2D,
   type SampledContour2D,
   type SampledPath2D,
 } from "@intermact/core";
@@ -16,24 +16,9 @@ import { buildStrokeGeometry } from "./stroke";
 import { buildFillGeometry } from "./fill";
 import { parseColor } from "./color";
 import { makeBasicMaterial } from "./material";
+import { type RenderContext, effectiveStyle, resolveLineWidth } from "./object-view-utils";
 
-/** Context the renderer passes to object views (e.g. for px→world line width). */
-export interface RenderContext {
-  /** World units per device-independent pixel, for `unit: "px"` line widths. */
-  readonly worldPerPixel: number;
-}
-
-const DEFAULT_LINE_WIDTH = 0.02;
-
-function resolveLineWidth(width: LineWidth | undefined, ctx: RenderContext): number {
-  if (width === undefined) return DEFAULT_LINE_WIDTH;
-  if (typeof width === "number") return width;
-  return width.unit === "px" ? width.value * ctx.worldPerPixel : width.value;
-}
-
-function effectiveStyle(object: IMObject2D, state: ObjectRenderState["state"]): ObjectStyle {
-  return { ...object.style, ...state.styleOverrides };
-}
+export { type RenderContext };
 
 /**
  * Holds the three.js objects for one Intermact object and updates them from a
@@ -59,7 +44,7 @@ export class ThreeObjectView {
   constructor(private object: IMObject2D) {}
 
   update(render: ObjectRenderState, ctx: RenderContext): void {
-    const { state } = render;
+    const state = render.state as RuntimeState2D;
     this.object = render.object as IMObject2D;
     const g = this.group;
     g.visible = state.visible;
@@ -81,7 +66,7 @@ export class ThreeObjectView {
     this.lastGeometryVersion = state.geometryVersion;
   }
 
-  private resolveStrokePath(state: ObjectRenderState["state"]): SampledPath2D | null {
+  private resolveStrokePath(state: RuntimeState2D): SampledPath2D | null {
     const stroke = findTrait(this.object.traits, "stroke");
     if (state.geometryOverride) {
       const contours: SampledContour2D[] = state.geometryOverride.contours.map((c) => {
@@ -97,7 +82,7 @@ export class ThreeObjectView {
     return stroke?.samplePath() ?? null;
   }
 
-  private resolveFillContours(state: ObjectRenderState["state"]): SampledContour2D[] | null {
+  private resolveFillContours(state: RuntimeState2D): SampledContour2D[] | null {
     const fill = findTrait(this.object.traits, "fill");
     if (state.geometryOverride) {
       return state.geometryOverride.contours.map((c) => {
@@ -109,7 +94,7 @@ export class ThreeObjectView {
     return raw ? [...raw] : null;
   }
 
-  private resolveUnderlayContours(state: ObjectRenderState["state"]): SampledContour2D[] | null {
+  private resolveUnderlayContours(state: RuntimeState2D): SampledContour2D[] | null {
     if (state.geometryOverride) return null;
     const path = this.object.geometry.sampleUnderlayPath?.() ?? null;
     return path ? [...path.contours] : null;
@@ -117,7 +102,7 @@ export class ThreeObjectView {
 
   private updateUnderlayFill(
     style: ObjectStyle,
-    state: ObjectRenderState["state"],
+    state: RuntimeState2D,
     geometryChanged: boolean,
   ): void {
     const contours = this.resolveUnderlayContours(state);
@@ -146,16 +131,20 @@ export class ThreeObjectView {
     }
   }
 
-  private updateFill(
-    style: ObjectStyle,
-    state: ObjectRenderState["state"],
-    geometryChanged: boolean,
-  ): void {
+  private updateFill(style: ObjectStyle, state: RuntimeState2D, geometryChanged: boolean): void {
     const fill = findTrait(this.object.traits, "fill");
     const groups = state.geometryOverride ? null : (fill?.fillGroups?.() ?? null);
     const contours = this.resolveFillContours(state);
     if (!contours || !style.fill) {
       this.disposeFill();
+      return;
+    }
+
+    // Per-group colors (heatmap / colored cells, design.md §6.2): one mesh per
+    // group, each with its own color. Takes precedence over a single fill mesh.
+    const groupColors = state.geometryOverride ? null : (fill?.fillGroupColors?.() ?? null);
+    if (groups && groups.length > 0 && groupColors && groupColors.length === groups.length) {
+      this.updateColoredFillGroups(groups, groupColors, state, geometryChanged);
       return;
     }
 
@@ -224,10 +213,7 @@ export class ThreeObjectView {
    * visible outline during the reveal phase (DrawBorderThenFill) — borrow the
    * fill color until both reveal and fill are complete.
    */
-  private resolveStrokeColor(
-    style: ObjectStyle,
-    state: ObjectRenderState["state"],
-  ): string | undefined {
+  private resolveStrokeColor(style: ObjectStyle, state: RuntimeState2D): string | undefined {
     if (style.stroke) return style.stroke;
     const writeComplete = isGlyphWriteComplete(
       state.revealEnd,
@@ -246,7 +232,7 @@ export class ThreeObjectView {
 
   private updateStroke(
     style: ObjectStyle,
-    state: ObjectRenderState["state"],
+    state: RuntimeState2D,
     width: number,
     geometryChanged: boolean,
   ): void {
@@ -267,15 +253,21 @@ export class ThreeObjectView {
       state.fillProgress,
       state.glyphWriteSpans,
     );
+    const axesLayout = findTrait(this.object.traits, "axes-layout");
     const contourGlyphIndex =
-      layout?.contourGlyphIndex() ?? fillTrait?.contourGlyphIndex?.() ?? undefined;
+      layout?.contourGlyphIndex() ??
+      axesLayout?.contourGroupIndex() ??
+      fillTrait?.contourGlyphIndex?.() ??
+      undefined;
+    const revealMode = state.strokeRevealMode ?? "path-order";
     const revealOpts =
       !writeComplete && state.glyphWriteSpans?.length && contourGlyphIndex?.length
         ? {
             contourGlyphIndex,
             glyphWriteSpans: state.glyphWriteSpans,
+            mode: revealMode,
           }
-        : undefined;
+        : { mode: revealMode };
 
     if (!this.strokeMesh || geometryChanged || revealChanged || widthChanged) {
       const geometry = buildStrokeGeometry(
@@ -312,6 +304,41 @@ export class ThreeObjectView {
       }
       material.opacity = alpha * state.opacity;
     }
+  }
+
+  /** Render one mesh per fill group, each filled with its own color. */
+  private updateColoredFillGroups(
+    groups: readonly (readonly SampledContour2D[])[],
+    colors: readonly string[],
+    state: RuntimeState2D,
+    geometryChanged: boolean,
+  ): void {
+    this.disposeFillMesh();
+    while (this.fillGroupMeshes.length < groups.length) {
+      const mesh = new Mesh(undefined, makeBasicMaterial("#000000", 1));
+      mesh.renderOrder = state.transform.zIndex;
+      this.fillGroupMeshes.push(mesh);
+      this.group.add(mesh);
+    }
+    while (this.fillGroupMeshes.length > groups.length) {
+      const mesh = this.fillGroupMeshes.pop()!;
+      this.group.remove(mesh);
+      mesh.geometry.dispose();
+      (mesh.material as MeshBasicMaterial).dispose();
+    }
+    groups.forEach((group, gi) => {
+      const mesh = this.fillGroupMeshes[gi]!;
+      if (!mesh.geometry || geometryChanged) {
+        mesh.geometry?.dispose();
+        mesh.geometry = buildFillGeometry([...group], [[...group]]);
+      }
+      const material = mesh.material as MeshBasicMaterial;
+      const { color, alpha } = parseColor(colors[gi] ?? "#000000");
+      material.color.copy(color);
+      material.opacity = alpha * state.opacity * state.fillProgress;
+      mesh.renderOrder = state.transform.zIndex;
+      mesh.visible = material.opacity > 0.001;
+    });
   }
 
   private disposeStroke(): void {

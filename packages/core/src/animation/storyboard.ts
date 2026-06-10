@@ -1,7 +1,15 @@
+import { globalRegistries } from "../extend/registries";
 import { type IMObject } from "../object/types";
-import { applyPatch2D, type RuntimeState2D } from "../runtime/state";
-import { type Animation } from "./spec";
 import {
+  applyPatch2D,
+  applyPatch3D,
+  type RuntimeState,
+  type RuntimeState2DPatch,
+  type RuntimeState3DPatch,
+} from "../runtime/state";
+import { type Animation, type AnimationSpec } from "./spec";
+import {
+  type AnimationCompiler,
   compileSpec,
   createIdGen,
   type CompileContext,
@@ -13,11 +21,34 @@ import {
 } from "./track";
 import { type PropertyPath } from "./spec";
 
+/**
+ * Resolve a plugin {@link AnimationCompiler} for a `custom` spec type. Defaults
+ * to the ambient {@link globalRegistries} so plugins installed before the build
+ * pass are visible without threading a registries object through scene/program
+ * call sites (design.md §18).
+ */
+export type AnimationResolver = (type: string) => AnimationCompiler | undefined;
+
 /** A named bookmark on the timeline for slide-style navigation (design.md §11.3). */
 export interface TimelineMarker {
   readonly name: string;
   readonly time: number;
 }
+
+/**
+ * A recorded build-pass timeline operation (design.md §17 serialization). The
+ * {@link StoryboardBuilder} keeps an ordered op-log of every `play`/`commit`/
+ * `wait`/`marker`; replaying it on a fresh builder reproduces an identical
+ * {@link Storyboard}. This is what lets `serialize`/`deserialize` round-trip the
+ * timeline without re-running the user program (the op-log carries the original
+ * {@link AnimationSpec} data, which is the serializable form — not the compiled
+ * closures).
+ */
+export type TimelineOp =
+  | { readonly op: "play"; readonly specs: readonly AnimationSpec[] }
+  | { readonly op: "commit"; readonly specs: readonly AnimationSpec[] }
+  | { readonly op: "wait"; readonly duration: number }
+  | { readonly op: "marker"; readonly name: string };
 
 /** Retained-mode, fully seekable timeline data (design.md §3.2). */
 export interface Storyboard {
@@ -43,7 +74,7 @@ function propertyToKey(property: PropertyPath): string {
   }
 }
 
-function readInitial(state: RuntimeState2D | undefined, property: PropertyPath): unknown {
+function readInitial(state: RuntimeState | undefined, property: PropertyPath): unknown {
   if (!state) return undefined;
   switch (property.type) {
     case "transform":
@@ -53,7 +84,7 @@ function readInitial(state: RuntimeState2D | undefined, property: PropertyPath):
     case "reveal":
       return state.revealEnd;
     case "fill":
-      return state.fillProgress;
+      return state.dimension === "2d" ? state.fillProgress : undefined;
     case "style":
       return (state.styleOverrides as Record<string, unknown> | undefined)?.[property.key];
   }
@@ -70,6 +101,7 @@ export class StoryboardBuilder {
   private signalTracks: SignalTrack[] = [];
   private effects: TimelineEffect[] = [];
   private markers: TimelineMarker[] = [];
+  private ops: TimelineOp[] = [];
   private cursor = 0;
   private readonly ids: IdGen = createIdGen();
   private readonly projected = new Map<string, unknown>();
@@ -77,18 +109,22 @@ export class StoryboardBuilder {
   private readonly compileContext: CompileContext;
 
   constructor(
-    private readonly initialStates: Map<string, RuntimeState2D>,
+    private readonly initialStates: Map<string, RuntimeState>,
     objects: ReadonlyMap<string, IMObject> = new Map(),
+    resolveAnimation: AnimationResolver = (type) => globalRegistries.animations.get(type),
   ) {
     this.compileContext = {
-      getObject: (id) => {
-        const obj = objects.get(id);
-        return obj && obj.dimension === "2d" ? obj : undefined;
-      },
+      getObject: (id) => objects.get(id),
       applyBaselinePatch: (targetId, patch) => {
         const current = this.initialStates.get(targetId);
-        if (current) this.initialStates.set(targetId, applyPatch2D(current, patch));
+        if (!current) return;
+        if (current.dimension === "3d") {
+          this.initialStates.set(targetId, applyPatch3D(current, patch as RuntimeState3DPatch));
+        } else {
+          this.initialStates.set(targetId, applyPatch2D(current, patch as RuntimeState2DPatch));
+        }
       },
+      resolveAnimation,
     };
     this.projection = {
       read: (targetId, property) => {
@@ -111,6 +147,7 @@ export class StoryboardBuilder {
 
   /** Append animations in parallel at the cursor; advance cursor by the longest. */
   play(animations: readonly Animation[]): number {
+    this.ops.push({ op: "play", specs: animations.map((a) => a.spec) });
     let max = 0;
     for (const animation of animations) {
       const result = compileSpec(
@@ -131,6 +168,7 @@ export class StoryboardBuilder {
 
   /** Apply immediate (duration-0) changes without advancing the cursor. */
   commit(animations: readonly Animation[]): void {
+    this.ops.push({ op: "commit", specs: animations.map((a) => a.spec) });
     for (const animation of animations) {
       const result = compileSpec(
         animation.spec,
@@ -147,12 +185,19 @@ export class StoryboardBuilder {
 
   /** Advance the cursor by `duration` seconds. */
   wait(duration: number): void {
+    this.ops.push({ op: "wait", duration });
     this.cursor += duration;
   }
 
   /** Record a named marker at the current cursor. */
   marker(name: string): void {
+    this.ops.push({ op: "marker", name });
     this.markers.push({ name, time: this.cursor });
+  }
+
+  /** Ordered op-log of build-pass operations (design.md §17 serialization). */
+  getOps(): readonly TimelineOp[] {
+    return this.ops;
   }
 
   /** Finalize into an immutable, sorted Storyboard. */

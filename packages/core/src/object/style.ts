@@ -24,6 +24,10 @@ export interface ObjectStyle {
   readonly fillRule?: "nonzero" | "evenodd";
   /** 3D material color convenience alias. */
   readonly color?: string;
+  /** Point size for 3D point clouds (world units). */
+  readonly pointSize?: number;
+  /** Render both faces of 3D meshes/surfaces (default true for surfaces). */
+  readonly doubleSided?: boolean;
 }
 
 /** Semantic layer metadata for accessibility, links, and handouts (§17). */

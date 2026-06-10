@@ -20,15 +20,28 @@ export interface TweenOptions {
 
 /** Addressable runtime-state property targeted by a tween. */
 export type PropertyPath =
-  | { readonly type: "transform"; readonly key: "position" | "rotation" | "scale" }
+  | {
+      readonly type: "transform";
+      readonly key: "position" | "rotation" | "scale";
+      /** Tween space: 2D (default) uses scalar rotation; 3D slerps quaternions. */
+      readonly space?: "2d" | "3d";
+    }
   | { readonly type: "opacity" }
   | { readonly type: "style"; readonly key: string }
   | { readonly type: "reveal" }
   | { readonly type: "fill" };
 
+/**
+ * Stroke reveal mode for `Create` / `write()`:
+ * - `path-order` — one continuous reveal along total arc length (default for paths).
+ * - `contour-parallel` — each contour reveals in parallel (axes parallel create).
+ * - `sequential` — grouped contours reveal in order (axes: axis → tick+label clusters).
+ */
+export type StrokeRevealMode = "path-order" | "contour-parallel" | "sequential";
+
 /** Stroke reveal description for `Create` / `write()`. */
 export interface StrokeRevealSpec {
-  readonly mode?: "path-order" | "contour-parallel";
+  readonly mode?: StrokeRevealMode;
   /** Glyph writing order: left-to-right, right-to-left, or all at once. */
   readonly direction?: "ltr" | "rtl" | "simultaneous";
   /**
@@ -122,7 +135,19 @@ export type AnimationSpec =
   | { readonly kind: "stagger"; readonly children: readonly AnimationSpec[]; readonly lag: number }
   | { readonly kind: "repeat"; readonly child: AnimationSpec; readonly times: number | "infinite" }
   | { readonly kind: "wait"; readonly duration: number }
-  | { readonly kind: "call"; readonly effect: () => void | Promise<void> };
+  | { readonly kind: "call"; readonly effect: () => void | Promise<void> }
+  | {
+      /**
+       * Plugin-supplied animation (design.md §18). Compiled by an
+       * `AnimationCompiler` registered under `type` in the animations registry;
+       * carries only serializable `params` so it round-trips through serialize.
+       */
+      readonly kind: "custom";
+      readonly type: string;
+      readonly targetId?: string;
+      readonly params?: unknown;
+      readonly duration: number;
+    };
 
 /**
  * Public animation handle: carries a spec, its total duration, and the set of
@@ -144,6 +169,7 @@ export function specDuration(spec: AnimationSpec): number {
     case "fade":
     case "tween-signal":
     case "wait":
+    case "custom":
       return spec.duration;
     case "call":
       return 0;
@@ -175,6 +201,9 @@ export function specTargets(spec: AnimationSpec): string[] {
       case "morph":
       case "fade":
         out.add(s.targetId);
+        break;
+      case "custom":
+        if (s.targetId) out.add(s.targetId);
         break;
       case "tween-signal":
         break;

@@ -13,6 +13,7 @@ import {
   type StrokeTrait,
 } from "../object/traits";
 import { computeBounds } from "./bounds";
+import { createSamplingMemo, sampleOptionsKey } from "./memoize";
 import {
   cumulativeLengths,
   type RawContour,
@@ -29,6 +30,8 @@ export interface GeometryProviderConfig {
   readonly fillGroups?: readonly (readonly RawContour[])[];
   /** Flat contour index → fill group index. */
   readonly contourGlyphIndex?: readonly number[];
+  /** Per-fill-group CSS colors (heatmap/colored cells, design.md §6.2). */
+  readonly fillGroupColors?: readonly string[];
   /** Default resample count for `samplePath` when none is requested. */
   readonly defaultSamples?: number;
 }
@@ -55,7 +58,7 @@ export function createGeometryProvider2D(config: GeometryProviderConfig): Geomet
   };
 
   const fillGroupsRaw = config.fillGroups;
-  const sampleFillGroups = (opts?: PathSampleOptions): SampledContour2D[][] | null => {
+  const sampleFillGroupsRaw = (opts?: PathSampleOptions): SampledContour2D[][] | null => {
     if (!fillGroupsRaw?.length) return null;
     const count = opts?.samples ?? config.defaultSamples;
     const useResample = count !== undefined && opts?.arcLength !== false;
@@ -69,28 +72,37 @@ export function createGeometryProvider2D(config: GeometryProviderConfig): Geomet
     );
   };
 
-  return {
-    capabilities,
-    samplePath(opts?: PathSampleOptions): SampledPath2D {
+  // Memoize the (immutable) definition's sampling by sampleOptions so repeated
+  // per-frame sampling is O(1) after the first call (design.md §15.2 #1).
+  const pathMemo = createSamplingMemo<SampledPath2D>();
+  const fillGroupMemo = createSamplingMemo<SampledContour2D[][] | null>();
+  const samplePath = (opts?: PathSampleOptions): SampledPath2D =>
+    pathMemo.get(sampleOptionsKey(opts), () => {
       const contours = sampleContours(opts);
       const totalLength = contours.reduce(
         (sum, c) => sum + cumulativeLengths(c.points, c.closed).total,
         0,
       );
       return { contours, totalLength };
-    },
+    });
+
+  return {
+    capabilities,
+    samplePath,
     getBounds(): Bounds2D {
       return bounds;
     },
     sampleBuffer(opts?: PathSampleOptions): Float32Array {
-      const contours = sampleContours(opts);
-      return contours[0]?.points ?? new Float32Array(0);
+      return samplePath(opts).contours[0]?.points ?? new Float32Array(0);
     },
     sampleFillGroups(opts?: PathSampleOptions): SampledContour2D[][] | null {
-      return sampleFillGroups(opts);
+      return fillGroupMemo.get(sampleOptionsKey(opts), () => sampleFillGroupsRaw(opts));
     },
     contourGlyphIndex(): readonly number[] | null {
       return config.contourGlyphIndex ?? null;
+    },
+    fillGroupColors(): readonly string[] | null {
+      return config.fillGroupColors ?? null;
     },
   };
 }
@@ -111,6 +123,7 @@ export function fillTraitFrom(
     contours: (opts) => provider.samplePath(opts).contours.filter((c) => c.closed),
     fillGroups: (opts) => provider.sampleFillGroups?.(opts) ?? undefined,
     contourGlyphIndex: () => provider.contourGlyphIndex?.() ?? undefined,
+    fillGroupColors: () => provider.fillGroupColors?.() ?? undefined,
   };
 }
 

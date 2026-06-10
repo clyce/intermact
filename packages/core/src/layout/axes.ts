@@ -2,9 +2,11 @@ import { type AbsXY, clamp, type Vec2, xy } from "../math/vec";
 import { linearScale, logScale, powScale, type Scale } from "../math/scale";
 import { createGeometryProvider2D, strokeTraitFrom } from "../geometry/provider";
 import { type RawContour, rawContourFromPoints } from "../geometry/sampling";
+import { resolveMathTickFontId } from "../text/font-registry";
 import { labelContours } from "../text/text-layout";
 import { type IMObject2D } from "../object/types";
 import { type ObjectStyle } from "../object/style";
+import { type AxesLayoutTrait } from "../object/traits";
 import { type Interval, type Scene2DProps } from "../scene/types";
 
 /** Scale family for an axis (design.md §7.3). */
@@ -35,6 +37,11 @@ export interface AxesProps {
   readonly exponent?: number;
   /** Base for `log` scales (default 10). */
   readonly logBase?: number;
+  /**
+   * Registered font id for numeric tick labels (default serif math-style face
+   * when demos call `loadDemoFonts`; falls back to the active default font).
+   */
+  readonly tickFont?: string;
 }
 
 /** @deprecated Use {@link AxesProps}. */
@@ -96,71 +103,117 @@ const DEFAULT_TICK_COUNT = 8;
 const TICK_LENGTH = 0.08;
 const TICK_LABEL_SIZE = 0.2;
 
+function pushGroup(
+  contours: RawContour[],
+  groupIndex: number[],
+  contour: RawContour,
+  group: number,
+): void {
+  contours.push(contour);
+  groupIndex.push(group);
+}
+
+function axesLayoutTrait(groupIndex: readonly number[]): AxesLayoutTrait {
+  const maxGroup = groupIndex.length > 0 ? Math.max(...groupIndex) : 0;
+  return {
+    kind: "axes-layout",
+    contourGroupIndex: () => groupIndex,
+    groupCount: () => maxGroup + 1,
+  };
+}
+
 /**
  * Build axis lines + ticks + numeric labels as an {@link IMObject2D}. The x-axis
  * sits at data `y=0` (clamped into the y domain) and the y-axis at data `x=0`,
  * mirroring Manim. Tick positions come from each axis {@link Scale}; labels use
- * the built-in stroke-font glyph renderer (M10).
+ * the outline glyph renderer in a math-serif font (M10).
  */
 export function axesObject(props: AxesProps, sceneDomain: Scene2DProps["domain"]): IMObject2D {
   const handle = createAxesHandle(props, sceneDomain);
   const showTicks = props.showTicks ?? true;
   const showTickLabels = props.showTickLabels ?? true;
   const tickCount = props.tickCount ?? DEFAULT_TICK_COUNT;
+  const tickFont = showTickLabels ? (props.tickFont ?? resolveMathTickFontId()) : undefined;
 
   const axisYData = clamp(0, Math.min(props.y[0], props.y[1]), Math.max(props.y[0], props.y[1]));
   const axisXData = clamp(0, Math.min(props.x[0], props.x[1]), Math.max(props.x[0], props.x[1]));
   const axisYWorld = handle.yScale(axisYData);
   const axisXWorld = handle.xScale(axisXData);
 
-  const contours: RawContour[] = [
+  const contours: RawContour[] = [];
+  const groupIndex: number[] = [];
+  let group = 0;
+
+  pushGroup(
+    contours,
+    groupIndex,
     rawContourFromPoints(
       [handle.c2p([props.x[0], axisYData]), handle.c2p([props.x[1], axisYData])],
       false,
     ),
+    group++,
+  );
+  pushGroup(
+    contours,
+    groupIndex,
     rawContourFromPoints(
       [handle.c2p([axisXData, props.y[0]]), handle.c2p([axisXData, props.y[1]])],
       false,
     ),
-  ];
+    group++,
+  );
 
   if (showTicks) {
     const xFmt = handle.xScale.tickFormat(tickCount);
     for (const tx of handle.xScale.ticks(tickCount)) {
       const wx = handle.xScale(tx);
-      contours.push(
+      const tickGroup = group++;
+      pushGroup(
+        contours,
+        groupIndex,
         rawContourFromPoints(
           [xy(wx, axisYWorld - TICK_LENGTH), xy(wx, axisYWorld + TICK_LENGTH)],
           false,
         ),
+        tickGroup,
       );
-      if (showTickLabels && Math.abs(tx - axisXData) > 1e-9) {
+      if (showTickLabels && tickFont && Math.abs(tx - axisXData) > 1e-9) {
         const text = labelContours(xFmt(tx), {
           size: TICK_LABEL_SIZE,
           origin: xy(wx, axisYWorld - TICK_LENGTH - 0.04),
           align: "center",
           baseline: "top",
+          font: tickFont,
         });
-        contours.push(...text.contours);
+        for (const c of text.contours) {
+          pushGroup(contours, groupIndex, c, tickGroup);
+        }
       }
     }
     const yFmt = handle.yScale.tickFormat(tickCount);
     for (const ty of handle.yScale.ticks(tickCount)) {
       const wy = handle.yScale(ty);
-      contours.push(
+      const tickGroup = group++;
+      pushGroup(
+        contours,
+        groupIndex,
         rawContourFromPoints(
           [xy(axisXWorld - TICK_LENGTH, wy), xy(axisXWorld + TICK_LENGTH, wy)],
           false,
         ),
+        tickGroup,
       );
-      if (showTickLabels && Math.abs(ty - axisYData) > 1e-9) {
+      if (showTickLabels && tickFont && Math.abs(ty - axisYData) > 1e-9) {
         const text = labelContours(yFmt(ty), {
           size: TICK_LABEL_SIZE,
           origin: xy(axisXWorld - TICK_LENGTH - 0.06, wy),
           align: "right",
           baseline: "middle",
+          font: tickFont,
         });
-        contours.push(...text.contours);
+        for (const c of text.contours) {
+          pushGroup(contours, groupIndex, c, tickGroup);
+        }
       }
     }
   }
@@ -171,10 +224,11 @@ export function axesObject(props: AxesProps, sceneDomain: Scene2DProps["domain"]
     ...props.style,
   };
   const provider = createGeometryProvider2D({ rawContours: contours, fillable: false });
+  const layoutTrait = axesLayoutTrait(groupIndex);
   const object: IMObject2D = {
     type: "axes",
     dimension: "2d",
-    traits: [strokeTraitFrom(provider)],
+    traits: [strokeTraitFrom(provider), layoutTrait],
     geometry: provider,
     style,
   };

@@ -1,5 +1,6 @@
 export * from "./easing";
 export * from "./spec";
+export * from "./tween-spec";
 export * from "./orchestration";
 export * from "./track";
 export * from "./storyboard";

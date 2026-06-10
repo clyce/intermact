@@ -43,6 +43,6 @@ docs/             @intermact/docs（私有，本文档站）
 ## 维护 API 文档
 
 1. 在源码中为**公共导出**编写 TSDoc（`/** … */`）
-2. 编辑 [`reference-index.src.md`](../reference-index.src.md) 可更新 **API Reference 总览**中的架构说明（Phase-1 / 非 PCG）；符号页仍由 TypeDoc 生成
+2. 编辑 [`reference-index.src.md`](../reference-index.src.md) 可更新 **API Reference 总览**中的架构说明（Phase-1 & Phase-2 归纳；Phase-3 符号页由 TypeDoc 生成）
 3. 运行 `pnpm run gen:reference`（`dev:docs` / `build:docs` 会自动执行）
 4. 输出到 `docs/reference/`，由 VitePress 挂载

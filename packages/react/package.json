@@ -1,6 +1,6 @@
 {
   "name": "@intermact/react",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "React bindings: IntermactCanvas, hooks (useIntermactPlayer, useSignal, useProgram).",
   "type": "module",
   "main": "./dist/index.js",
@@ -27,13 +27,16 @@
   "peerDependencies": {
     "@react-three/fiber": ">=8.0.0",
     "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
     "three": ">=0.160.0"
   },
   "devDependencies": {
     "@react-three/fiber": "^9.0.0",
     "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.0",
     "@types/three": "^0.171.0",
     "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "three": "^0.171.0"
   }
 }

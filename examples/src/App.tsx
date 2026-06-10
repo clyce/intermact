@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { DemoShell } from "./lib/DemoShell";
-import { demos } from "./registry";
+import { demos, demoSourcePath } from "./registry";
+
+const REPO_BLOB = "https://github.com/intermact/intermact/blob/main/";
 
 function useHashRoute(): [string, (id: string) => void] {
   const [hash, setHash] = useState(() => window.location.hash.slice(1));
@@ -43,9 +45,21 @@ export function App() {
           flexShrink: 0,
         }}
       >
-        <h1 style={{ fontSize: 16, padding: "0 16px", margin: "8px 0 16px" }}>
-          Intermact Examples
-        </h1>
+        <h1 style={{ fontSize: 16, padding: "0 16px", margin: "8px 0 4px" }}>Intermact Examples</h1>
+        <a
+          href={`${REPO_BLOB}${demoSourcePath(active)}`}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: "block",
+            padding: "0 16px 12px",
+            fontSize: 12,
+            color: "#7dd3fc",
+            textDecoration: "none",
+          }}
+        >
+          View source: {demoSourcePath(active).replace("examples/src/", "")} ↗
+        </a>
         {groups.map(([group, items]) => (
           <div key={group} style={{ marginBottom: 12 }}>
             <div
