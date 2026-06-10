@@ -2,6 +2,8 @@
 
 Intermact is an interactive math visualization platform built on **React Three Fiber**. Starting as an "interactive Manim alternative" (v0.1), it expanded through the v0.2 math toolbox into a full 2D interactive narrative system; v1.0 further delivers PCG, 3D, export/embed, and plugin extensibility. The same program can orchestrate narrative animation, support live parameter tuning, let viewers drag to explore, and embed into web pages and handouts.
 
+Packages are on npm (`@intermact/core`, `@intermact/react` **v1.0.0**). To install in your app, see [Getting started · Use in your app (npm)](./getting-started.md#use-in-your-app-npm); to hack on this repo, see "Run from source" on the same page.
+
 ## What problem does it solve?
 
 | Pain point | Intermact approach |

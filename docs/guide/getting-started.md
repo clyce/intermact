@@ -3,12 +3,26 @@
 ## 环境要求
 
 - **Node.js** ≥ 20
-- **pnpm** ≥ 10
+- **pnpm** ≥ 10（仅 clone 仓库开发时需要）
 
-## 安装与运行
+## 在应用中使用（npm）
+
+在自有 React 项目中安装（无需 clone 本仓库）：
 
 ```bash
-git clone <repo-url> intermact
+npm install @intermact/core @intermact/react \
+  react react-dom three @react-three/fiber
+```
+
+文档站：[https://clyce.github.io/intermact/](https://clyce.github.io/intermact/)  
+npm：[@intermact/core](https://www.npmjs.com/package/@intermact/core) · [@intermact/react](https://www.npmjs.com/package/@intermact/react)
+
+下文「最小示例」可直接复制到应用中。
+
+## 从源码运行（贡献者）
+
+```bash
+git clone https://github.com/clyce/intermact.git
 cd intermact
 pnpm install
 ```

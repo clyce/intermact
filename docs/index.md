@@ -10,6 +10,9 @@ hero:
       text: 快速上手
       link: /guide/getting-started
     - theme: alt
+      text: npm 安装
+      link: https://www.npmjs.com/package/@intermact/react
+    - theme: alt
       text: API Reference
       link: /reference/
     - theme: alt
@@ -43,6 +46,14 @@ features:
 ## 文档覆盖：Phase-1 & Phase-2（v0.1–v0.2）
 
 **Phase-1（v0.1）** 交付从空 Canvas 到「基础 2D 叙事 + 交互函数曲线」的完整闭环；**Phase-2（v0.2）** 扩展 Scale、数理构件、Morph matching、文本/LaTeX、交互与布局。指南、API Reference 总览与示例索引均已覆盖 M0–L2 公开 API。仓库当前版本为 **v1.0**（含 Phase-3 PCG/3D/导出/插件）；Phase-3 概念见 [扩展系统](/guide/extensibility)。完整架构契约见 [`dev-docs/design.md`](https://github.com/clyce/intermact/blob/main/dev-docs/design.md)。
+
+**在应用中使用：**
+
+```bash
+npm install @intermact/core @intermact/react react react-dom three @react-three/fiber
+```
+
+**从源码开发（贡献者）：**
 
 ```bash
 pnpm install

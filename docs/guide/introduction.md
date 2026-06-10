@@ -2,6 +2,8 @@
 
 Intermact 是一个基于 **React Three Fiber** 的交互式数理可视化平台。它以「可交互的 Manim 替代品」为起点（v0.1），通过 v0.2 数理工具箱扩展为完整的 2D 交互叙事系统；v1.0 进一步交付 PCG、3D、导出/嵌入与插件扩展。同一份程序既能编排叙事动画，又能实时调参、被观众拖拽探索，并嵌入网页与讲义。
 
+库已发布至 npm（`@intermact/core`、`@intermact/react` **v1.0.0**）。在自有项目中安装见 [快速上手 · 在应用中使用（npm）](./getting-started.md#在应用中使用-npm)；clone 本仓库参与开发见同页「从源码运行」。
+
 ## 解决什么问题？
 
 | 痛点 | Intermact 的做法 |

@@ -27,11 +27,13 @@ docs/             @intermact/docs (private, this docs site)
 
 ## Application dependencies
 
+**npm consumers** (published on [registry.npmjs.org](https://www.npmjs.com/org/intermact)):
+
 ```json
 {
   "dependencies": {
-    "@intermact/core": "workspace:*",
-    "@intermact/react": "workspace:*",
+    "@intermact/core": "^1.0.0",
+    "@intermact/react": "^1.0.0",
     "@react-three/fiber": "^9.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -39,6 +41,10 @@ docs/             @intermact/docs (private, this docs site)
   }
 }
 ```
+
+`@intermact/render-r3f` and `@intermact/render-three` are installed transitively via `@intermact/react`.
+
+**Inside this monorepo**, development still uses `workspace:*` (see `examples/package.json`).
 
 ## Maintaining API documentation
 

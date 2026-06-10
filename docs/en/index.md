@@ -10,6 +10,9 @@ hero:
       text: Get Started
       link: /en/guide/getting-started
     - theme: alt
+      text: Install from npm
+      link: https://www.npmjs.com/package/@intermact/react
+    - theme: alt
       text: API Reference
       link: /reference/
     - theme: alt
@@ -43,6 +46,14 @@ features:
 ## Documentation coverage: Phase-1 & Phase-2 (v0.1–v0.2)
 
 **Phase-1 (v0.1)** delivers the full loop from an empty canvas to basic 2D narrative plus interactive function curves; **Phase-2 (v0.2)** extends Scale, math constructs, Morph matching, text/LaTeX, interaction, and layout. The guides, API Reference overview, and example index cover the M0–L2 public API. The repository is currently at **v1.0** (including Phase-3 PCG/3D/export/plugins); Phase-3 concepts are in [Extensibility](/en/guide/extensibility). See the full architecture contract in [`dev-docs/design.md`](https://github.com/clyce/intermact/blob/main/dev-docs/design.md).
+
+**Use in your app:**
+
+```bash
+npm install @intermact/core @intermact/react react react-dom three @react-three/fiber
+```
+
+**Develop from source (contributors):**
 
 ```bash
 pnpm install

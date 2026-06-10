@@ -27,11 +27,13 @@ docs/             @intermact/docs（私有，本文档站）
 
 ## 应用侧依赖
 
+**npm 用户**（已发布至 [registry.npmjs.org](https://www.npmjs.com/org/intermact)）：
+
 ```json
 {
   "dependencies": {
-    "@intermact/core": "workspace:*",
-    "@intermact/react": "workspace:*",
+    "@intermact/core": "^1.0.0",
+    "@intermact/react": "^1.0.0",
     "@react-three/fiber": "^9.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -39,6 +41,10 @@ docs/             @intermact/docs（私有，本文档站）
   }
 }
 ```
+
+`@intermact/render-r3f` 与 `@intermact/render-three` 会作为 `@intermact/react` 的传递依赖自动安装。
+
+**本 monorepo 内**开发仍使用 `workspace:*`（见 `examples/package.json`）。
 
 ## 维护 API 文档
 

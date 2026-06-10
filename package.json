@@ -25,7 +25,9 @@
     "build:docs": "pnpm --filter @intermact/docs run build",
     "build:site": "node scripts/build-site.mjs",
     "preview:docs": "pnpm --filter @intermact/docs run preview",
-    "preview:site": "node scripts/verify-site-dist.mjs && pnpm run preview:docs"
+    "preview:site": "node scripts/verify-site-dist.mjs && pnpm run preview:docs",
+    "publish:packages": "node scripts/publish-packages.mjs",
+    "publish:packages:dry-run": "node scripts/publish-packages.mjs --dry-run"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

@@ -2,6 +2,22 @@
   "name": "@intermact/render-r3f",
   "version": "1.0.0",
   "description": "React Three Fiber renderer adapter consuming RenderSnapshot.",
+  "license": "MIT",
+  "author": "clyce",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clyce/intermact.git",
+    "directory": "packages/render-r3f"
+  },
+  "homepage": "https://clyce.github.io/intermact/",
+  "bugs": "https://github.com/clyce/intermact/issues",
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

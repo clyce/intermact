@@ -3,12 +3,26 @@
 ## Requirements
 
 - **Node.js** ≥ 20
-- **pnpm** ≥ 10
+- **pnpm** ≥ 10 (only when cloning the repo for development)
 
-## Install and run
+## Use in your app (npm)
+
+Install into your own React project (no need to clone this repo):
 
 ```bash
-git clone <repo-url> intermact
+npm install @intermact/core @intermact/react \
+  react react-dom three @react-three/fiber
+```
+
+Docs: [https://clyce.github.io/intermact/en/](https://clyce.github.io/intermact/en/)  
+npm: [@intermact/core](https://www.npmjs.com/package/@intermact/core) · [@intermact/react](https://www.npmjs.com/package/@intermact/react)
+
+The minimal example below can be copied straight into your app.
+
+## Run from source (contributors)
+
+```bash
+git clone https://github.com/clyce/intermact.git
 cd intermact
 pnpm install
 ```
