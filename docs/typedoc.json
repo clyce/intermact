@@ -20,7 +20,7 @@
   "excludeInternal": true,
   "excludeExternals": true,
   "hideGenerator": true,
-  "sourceLinkTemplate": "https://github.com/intermact/intermact/blob/main/{path}#L{line}",
+  "sourceLinkTemplate": "https://github.com/clyce/intermact/blob/main/{path}#L{line}",
   "externalSymbolLinkMappings": {
     "@intermact/core": {
       "Player": "/reference/@intermact/core/classes/Player",

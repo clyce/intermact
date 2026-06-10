@@ -15,7 +15,7 @@ See [`dev-docs/intro.md`](dev-docs/intro.md) for motivation,
 [`dev-docs/dev-roadmap.md`](dev-docs/dev-roadmap.md) for the milestone roadmap.
 
 **Site (VitePress + TypeDoc + examples):** `pnpm run dev:site` → `http://localhost:5174`
-(guides, API reference, and the interactive gallery at `/demos/`). Production:
+(guides in **简体中文** at `/` and **English** at `/en/`, API reference, and the interactive gallery at `/demos/`). Production:
 `pnpm run build:site` then `pnpm run preview:site`. Standalone gallery only:
 `pnpm run dev:examples` on port 5173. **API Reference** is generated via
 `pnpm run gen:reference`.

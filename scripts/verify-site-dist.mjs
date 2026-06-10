@@ -8,7 +8,13 @@ import { siteDistDir } from "./site-config.mjs";
 
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 
-const required = ["index.html", "guide/getting-started.html", "demos/index.html"];
+const required = [
+  "index.html",
+  "guide/getting-started.html",
+  "en/index.html",
+  "en/guide/getting-started.html",
+  "demos/index.html",
+];
 
 export function verifySiteDist(distDir = siteDistDir) {
   const missing = required.filter((rel) => !existsSync(join(distDir, rel)));

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DemoShell } from "./lib/DemoShell";
 import { demos, demoSourcePath } from "./registry";
 
-const REPO_BLOB = "https://github.com/intermact/intermact/blob/main/";
+const REPO_BLOB = "https://github.com/clyce/intermact/blob/main/";
 
 function useHashRoute(): [string, (id: string) => void] {
   const [hash, setHash] = useState(() => window.location.hash.slice(1));

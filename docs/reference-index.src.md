@@ -2,7 +2,7 @@
 
 本文档总览 **v0.1–v1.0（Phase-1 / Phase-2 / Phase-3）** 公共 API 的架构与入口；各符号页由 [TypeDoc](https://typedoc.org/) 从 `packages/*/src` 的导出项与 TSDoc 注释自动生成。Phase-3（PCG / 3D / 序列化导出 / 插件）的 API 地图见下文 **§Phase-3**，概念教程见 [PCG](/guide/pcg) / [3D](/guide/3d) / [导出嵌入](/guide/export-embed) / [性能](/guide/performance) / [扩展系统](/guide/extensibility)。
 
-> 完整契约与修订记录见仓库 [`dev-docs/design.md`](https://github.com/intermact/intermact/blob/main/dev-docs/design.md)。概念性教程见 [指南 · 架构概览](/guide/architecture)。
+> 完整契约与修订记录见仓库 [`dev-docs/design.md`](https://github.com/clyce/intermact/blob/main/dev-docs/design.md)。概念性教程见 [指南 · 架构概览](/guide/architecture)。
 
 ## 愿景与 API 边界
 

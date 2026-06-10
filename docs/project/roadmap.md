@@ -1,6 +1,6 @@
 # 路线图与里程碑
 
-完整路线图见仓库 [`dev-docs/dev-roadmap.md`](https://github.com/intermact/intermact/blob/main/dev-docs/dev-roadmap.md)。本文档是在线文档中的摘要。
+完整路线图见仓库 [`dev-docs/dev-roadmap.md`](https://github.com/clyce/intermact/blob/main/dev-docs/dev-roadmap.md)。本文档是在线文档中的摘要。
 
 ## 三阶段愿景
 
@@ -23,7 +23,7 @@
 | M6 | 响应式最小集 | ✅ |
 | L1 | v0.1 验收 | ✅ |
 
-实现细节见 [`design.md §0.1`](https://github.com/intermact/intermact/blob/main/dev-docs/design.md)。在线 [v0.1 验收清单](./v01-checklist.md)。
+实现细节见 [`design.md §0.1`](https://github.com/clyce/intermact/blob/main/dev-docs/design.md)。在线 [v0.1 验收清单](./v01-checklist.md)。
 
 ## Phase-2（v0.2）
 
@@ -37,7 +37,7 @@
 | M12 | 布局与 Inspector | ✅ |
 | L2 | v0.2 验收 | ✅ |
 
-实现细节见 [`design.md §0.2`](https://github.com/intermact/intermact/blob/main/dev-docs/design.md)。在线 [v0.2 验收清单](./v02-checklist.md)。
+实现细节见 [`design.md §0.2`](https://github.com/clyce/intermact/blob/main/dev-docs/design.md)。在线 [v0.2 验收清单](./v02-checklist.md)。
 
 ## Phase-3（v1.0）
 

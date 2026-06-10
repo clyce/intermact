@@ -1,5 +1,10 @@
 import { defineConfig } from "vitepress";
-import typedocSidebar from "../reference/typedoc-sidebar.json";
+import { withMermaid } from "vitepress-plugin-mermaid";
+import {
+  buildNav,
+  buildSidebar,
+  searchLocaleOptions,
+} from "./shared";
 
 /** Live examples proxy — only when `pnpm run dev:site` sets this env var. */
 const proxyExamples = process.env.INTERMACT_DEV_SITE === "1";
@@ -7,151 +12,130 @@ const proxyExamples = process.env.INTERMACT_DEV_SITE === "1";
 /** Root path for GitHub Project Pages (`/Intermact/`) or `/` locally. */
 const siteBase = process.env.SITE_BASE || "/";
 
-export default defineConfig({
-  base: siteBase,
-  title: "Intermact",
-  description: "Interactive Manim-style math visualization on React Three Fiber.",
-  lang: "zh-CN",
-  lastUpdated: true,
-  cleanUrls: true,
-  head: [
-    ["meta", { name: "theme-color", content: "#0b1020" }],
-    ["link", { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }],
-  ],
-  themeConfig: {
-    logo: "/logo.svg",
-    nav: [
-      { text: "指南", link: "/guide/introduction" },
-      { text: "API Reference", link: "/reference/" },
-      { text: "交互示例", link: "/demos/" },
-      { text: "路线图", link: "/project/roadmap" },
-      {
-        text: "设计文档",
-        link: "https://github.com/intermact/intermact/blob/main/dev-docs/design.md",
-      },
-    ],
-    sidebar: {
-      "/guide/": [
-        {
-          text: "开始",
-          items: [
-            { text: "简介", link: "/guide/introduction" },
-            { text: "快速上手", link: "/guide/getting-started" },
-            { text: "架构概览", link: "/guide/architecture" },
-          ],
-        },
-        {
-          text: "核心能力（v0.1）",
-          items: [
-            { text: "程序与场景", link: "/guide/program-and-scene" },
-            { text: "时间线与 Player", link: "/guide/timeline-and-player" },
-            { text: "2D 几何", link: "/guide/geometry" },
-            { text: "渲染", link: "/guide/rendering" },
-            { text: "动画", link: "/guide/animation" },
-            { text: "坐标系与轴", link: "/guide/coordinates" },
-            { text: "响应式", link: "/guide/reactive" },
-          ],
-        },
-        {
-          text: "数理工具箱（v0.2）",
-          items: [
-            { text: "Scale 与刻度", link: "/guide/scale" },
-            { text: "数理构件库", link: "/guide/math-constructs" },
-            { text: "Morph 与分部匹配", link: "/guide/morph" },
-            { text: "文本与 LaTeX 管线", link: "/guide/text-latex" },
-            { text: "交互系统", link: "/guide/interaction" },
-            { text: "布局与 Inspector", link: "/guide/layout-inspector" },
-          ],
-        },
-        {
-          text: "PCG 演示系统（v1.0）",
-          items: [
-            { text: "程序化生成（PCG）", link: "/guide/pcg" },
-            { text: "3D 场景与相机", link: "/guide/3d" },
-            { text: "导出、分享与嵌入", link: "/guide/export-embed" },
-            { text: "性能与大数据", link: "/guide/performance" },
-          ],
-        },
-        {
-          text: "扩展系统（v0.7）",
-          items: [{ text: "插件与注册表", link: "/guide/extensibility" }],
-        },
-      ],
-      "/reference/": [
-        {
-          text: "API Reference",
-          items: [{ text: "总览", link: "/reference/" }, ...typedocSidebar],
-        },
-      ],
-      "/examples/": [
-        {
-          text: "示例",
-          items: [
-            { text: "交互演示（画廊）", link: "/demos/" },
-            { text: "目录索引", link: "/examples/" },
-          ],
-        },
-      ],
-      "/project/": [
-        {
-          text: "项目",
-          items: [
-            { text: "路线图与里程碑", link: "/project/roadmap" },
-            { text: "v0.1 验收清单", link: "/project/v01-checklist" },
-            { text: "v0.2 验收清单", link: "/project/v02-checklist" },
-            { text: "v1.0 验收清单", link: "/project/v1-checklist" },
-          ],
-        },
-      ],
-      "/packages/": [
-        {
-          text: "Monorepo",
-          items: [{ text: "包分层说明", link: "/packages/" }],
-        },
-      ],
-    },
-    socialLinks: [
-      {
-        icon: "github",
-        link: "https://github.com/intermact/intermact",
-      },
-    ],
-    footer: {
-      message: "Intermact v1.0 — 文档覆盖 Phase-1 / Phase-2 / Phase-3（全阶段）",
-      copyright: "MIT License",
-    },
-    search: {
-      provider: "local",
-    },
-    editLink: {
-      pattern: "https://github.com/intermact/intermact/edit/main/docs/:path",
-      text: "在 GitHub 上编辑此页",
-    },
-  },
-  vite: {
-    server: {
-      port: 5174,
-      strictPort: true,
-      ...(proxyExamples
-        ? {
-            proxy: {
-              // Gallery SPA + assets — skip VitePress markdown module resolution.
-              "^/demos/": {
-                target: "http://127.0.0.1:5173",
-                changeOrigin: true,
-                bypass(req) {
-                  const url = req.url ?? "";
-                  if (url.includes(".md")) return url;
-                },
-              },
-              "^/demos$": {
-                target: "http://127.0.0.1:5173",
-                changeOrigin: true,
-                rewrite: () => "/demos/",
+const sharedHead = [
+  ["meta", { name: "theme-color", content: "#0b1020" }],
+  ["link", { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }],
+];
+
+const sharedVite = {
+  server: {
+    port: 5174,
+    strictPort: true,
+    ...(proxyExamples
+      ? {
+          proxy: {
+            // Gallery SPA + assets — skip VitePress markdown module resolution.
+            "^/demos/": {
+              target: "http://127.0.0.1:5173",
+              changeOrigin: true,
+              bypass(req: { url?: string }) {
+                const url = req.url ?? "";
+                if (url.includes(".md")) return url;
               },
             },
-          }
-        : {}),
-    },
+            "^/demos$": {
+              target: "http://127.0.0.1:5173",
+              changeOrigin: true,
+              rewrite: () => "/demos/",
+            },
+          },
+        }
+      : {}),
   },
-});
+};
+
+export default withMermaid(
+  defineConfig({
+    base: siteBase,
+    cleanUrls: true,
+    lastUpdated: true,
+    /** TypeDoc symbol pages are shared via `rewrites` from `en/reference/@intermact/*`. */
+    ignoreDeadLinks: [/^\/en\/reference\/@intermact\//],
+    head: sharedHead,
+    /**
+     * English locale reuses TypeDoc-generated symbol pages under `reference/`.
+     * Only `en/reference/index.md` is locale-specific (hand-written overview).
+     */
+    rewrites: {
+      "en/reference/@intermact/:rest*": "reference/@intermact/:rest*",
+    },
+    locales: {
+      root: {
+        label: "简体中文",
+        lang: "zh-CN",
+        title: "Intermact",
+        description: "基于 React Three Fiber 的可交互 Manim 式数理可视化。",
+        themeConfig: {
+          logo: "/logo.svg",
+          nav: buildNav(""),
+          sidebar: buildSidebar(""),
+          socialLinks: [
+            {
+              icon: "github",
+              link: "https://github.com/clyce/intermact",
+            },
+          ],
+          footer: {
+            message:
+              "Intermact v1.0 — 文档覆盖 Phase-1 / Phase-2 / Phase-3（全阶段）",
+            copyright: "MIT License",
+          },
+          search: {
+            provider: "local",
+            options: {
+              locales: {
+                root: searchLocaleOptions.root,
+              },
+            },
+          },
+          editLink: {
+            pattern:
+              "https://github.com/clyce/intermact/edit/main/docs/:path",
+            text: "在 GitHub 上编辑此页",
+          },
+        },
+      },
+      en: {
+        label: "English",
+        lang: "en-US",
+        link: "/en/",
+        title: "Intermact",
+        description:
+          "Interactive Manim-style math visualization on React Three Fiber.",
+        themeConfig: {
+          logo: "/logo.svg",
+          nav: buildNav("en"),
+          sidebar: buildSidebar("en"),
+          socialLinks: [
+            {
+              icon: "github",
+              link: "https://github.com/clyce/intermact",
+            },
+          ],
+          footer: {
+            message:
+              "Intermact v1.0 — docs cover Phase-1 / Phase-2 / Phase-3 (all stages)",
+            copyright: "MIT License",
+          },
+          search: {
+            provider: "local",
+            options: {
+              locales: {
+                en: searchLocaleOptions.en,
+              },
+            },
+          },
+          editLink: {
+            pattern:
+              "https://github.com/clyce/intermact/edit/main/docs/:path",
+            text: "Edit this page on GitHub",
+          },
+        },
+      },
+    },
+    mermaid: {
+      theme: "neutral",
+    },
+    vite: sharedVite,
+  }),
+);
