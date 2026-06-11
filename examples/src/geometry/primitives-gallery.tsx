@@ -10,8 +10,7 @@ import {
   rectangle,
   xy,
 } from "@intermact/core";
-import { DemoCanvas } from "../lib/DemoCanvas";
-import { geometryPreviewProgram } from "../lib/geometryPreviewProgram";
+import { GeometryPreviewCell } from "../lib/GeometryPreviewCell";
 
 /**
  * `examples/geometry/primitives-gallery` (dev-roadmap.md M2).
@@ -105,14 +104,7 @@ export function PrimitivesGalleryDemo() {
         }}
       >
         {items.map((it) => (
-          <figure key={it.title} style={{ margin: 0 }}>
-            <div style={{ height: 220, borderRadius: 8, overflow: "hidden" }}>
-              <DemoCanvas program={geometryPreviewProgram(it.object)} />
-            </div>
-            <figcaption style={{ color: "#cbd5e1", fontSize: 13, marginTop: 6 }}>
-              {it.title}
-            </figcaption>
-          </figure>
+          <GeometryPreviewCell key={it.title} object={it.object} title={it.title} />
         ))}
       </div>
     </div>

@@ -77,9 +77,9 @@ export interface DemoEntry {
   readonly group: string;
   /** The demo component. */
   readonly Component: ComponentType;
-  /** Overlay caption explaining what the demo shows (required for every example). */
+  /** Short description shown in the bar below the toolbar (required for every example). */
   readonly caption: ReactNode;
-  /** Where to place the caption when it would cover content. */
+  /** @deprecated Captions are no longer overlaid on the canvas; kept for registry compatibility. */
   readonly captionPlacement?: "top" | "bottom";
   /**
    * Repo-relative source path for the "View source" link. Defaults to

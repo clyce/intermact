@@ -6,13 +6,51 @@
     <title>Intermact Examples</title>
     <style>
       html,
-      body,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+      }
+
       #root {
         margin: 0;
         height: 100%;
+        overflow: hidden;
         background: #0b1020;
         color: #e5e7eb;
         font-family: ui-sans-serif, system-ui, sans-serif;
+      }
+
+      /* Single scroll container — avoid nested overflow on <pre> (hides the horizontal bar). */
+      .demo-source-scroll {
+        overflow: auto;
+      }
+
+      .demo-source-highlight {
+        display: block;
+        padding: 8px 10px;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .demo-source-highlight pre {
+        margin: 0;
+        padding: 4px 6px;
+        background: transparent !important;
+        overflow: visible;
+        white-space: pre;
+      }
+
+      .demo-source-highlight code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.55;
+        tab-size: 2;
+        white-space: pre;
+      }
+
+      [role="separator"]:hover .resize-handle-bar {
+        background: #38bdf8;
       }
     </style>
   </head>
