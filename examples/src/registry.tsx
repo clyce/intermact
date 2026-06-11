@@ -521,7 +521,7 @@ export const demos: readonly DemoEntry[] = [
     "Nested scene panel (§10.2)",
     "3d",
     NestedScenePanel3DDemo,
-    "M14 / §10.2, §19.5: the core render(scene, camera) API composes an independent animated sub-scene as a registerable rendered-scene object. SceneView auto-composites it into an offscreen render target; it is framed and faded in like any other object.",
+    "M14 / §10.2, §19.5: 2D host scene (left chrome) + a framed live panel (right) built with core render(scene, camera). The embedded sub-scene plays on its own timeline inside the offscreen texture — orange dot loops in the panel after fade-in.",
   ),
   entry(
     "3d/grouping",

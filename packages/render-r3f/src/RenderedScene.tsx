@@ -88,8 +88,6 @@ class OffscreenSceneRenderer {
 function tickSource(
   source: RenderedSceneSource,
   textureMode: "live" | "snapshot",
-  hostTime: number,
-  hostPlaying: boolean,
   delta: number,
   seeded: { value: boolean },
 ): RenderSnapshot {
@@ -99,10 +97,10 @@ function tickSource(
       source.seek(source.duration);
       seeded.value = true;
     }
-  } else if (hostPlaying) {
-    source.advance(Math.min(delta, 0.05));
   } else {
-    source.seek(Math.min(hostTime, source.duration));
+    // Live panels own an independent sub-timeline (design.md §10.2) — advance every
+    // frame so the embed keeps animating even when the host timeline is paused.
+    source.advance(Math.min(delta, 0.05));
   }
   return source.snapshot() as RenderSnapshot;
 }
@@ -136,7 +134,7 @@ export function RenderedScenePanel({
   useEffect(() => () => offscreen.dispose(), [offscreen]);
 
   useFrame(({ gl }, delta) => {
-    const snapshot = tickSource(source, textureMode, 0, true, delta, seeded.current);
+    const snapshot = tickSource(source, textureMode, delta, seeded.current);
     offscreen.render(gl, snapshot, background ?? source.background ?? "#0b1020");
   });
 
@@ -192,14 +190,7 @@ export function HostRenderedScenePanel({
     if (!offscreen || !trait) return;
     const rs = hostPlayer.getSnapshot().objects.get(objectId);
     if (!rs) return;
-    const snapshot = tickSource(
-      trait.source,
-      trait.textureMode,
-      hostPlayer.time,
-      hostPlayer.state === "playing",
-      delta,
-      seeded.current,
-    );
+    const snapshot = tickSource(trait.source, trait.textureMode, delta, seeded.current);
     offscreen.render(gl, snapshot, trait.source.background ?? "#0b1020");
 
     const mesh = meshRef.current;
