@@ -24,6 +24,8 @@ const shapes: Record<string, IMObject2D> = {
   }),
 };
 
+const CANVAS_MIN_HEIGHT = 360;
+
 export function SamplingDebugDemo() {
   const [shape, setShape] = useState<keyof typeof shapes>("circle");
   const [samples, setSamples] = useState(48);
@@ -32,24 +34,29 @@ export function SamplingDebugDemo() {
   const program = useMemo(() => samplingDebugProgram(object, samples), [object, samples]);
 
   return (
-    <div style={{ padding: 24 }}>
-      <h2 style={{ marginTop: 0 }}>Sampling debug</h2>
-      <p style={{ color: "#94a3b8", maxWidth: 680 }}>
-        Red dots are arc-length sample points, the orange box is the AABB, purple lines are the
-        earcut triangulation �?all rendered through <code>IntermactCanvas</code>.
-      </p>
+    <div
+      style={{
+        boxSizing: "border-box",
+        height: "100%",
+        padding: 16,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+      }}
+    >
       <div
         style={{
           display: "flex",
-          gap: 16,
+          gap: 12,
           alignItems: "center",
-          marginBottom: 12,
           flexWrap: "wrap",
+          flexShrink: 0,
         }}
       >
         {Object.keys(shapes).map((key) => (
           <button
             key={key}
+            type="button"
             onClick={() => setShape(key as keyof typeof shapes)}
             style={{
               padding: "6px 12px",
@@ -78,8 +85,17 @@ export function SamplingDebugDemo() {
           />
         </label>
       </div>
-      <div style={{ height: "100%", maxWidth: 420, borderRadius: 8, overflow: "hidden" }}>
-        <DemoCanvas program={program} />
+      <div
+        style={{
+          flex: 1,
+          minHeight: CANVAS_MIN_HEIGHT,
+          maxWidth: 480,
+          width: "100%",
+          borderRadius: 8,
+          overflow: "hidden",
+        }}
+      >
+        <DemoCanvas program={program} skipFonts />
       </div>
     </div>
   );

@@ -126,7 +126,7 @@ const program = createProgram(async (ctx) => {
 
 export function StrokeFillShowcaseDemo() {
   return (
-    <div style={{ position: "absolute", inset: 0 }}>
+    <div style={{ height: "100%" }}>
       <DemoCanvas program={program} controls={{ timeline: true }} autoplay />
     </div>
   );

@@ -16,16 +16,26 @@ export async function loadDemoFonts(ctx: IntermactProgramContext) {
   return { sans, serif };
 }
 
+const fontWrappedPrograms = new WeakMap<IntermactProgram, IntermactProgram>();
+
 /**
  * Wrap a program so demo fonts are registered before user logic runs.
  * Required for sync text APIs (`labelContours`, `glyphText`, `textObject` without
  * explicit `font`) and axis tick labels (phase-2-review §12.2.2).
+ *
+ * Cached per `program` so {@link useIntermactPlayer} does not restart the build
+ * pass when the gallery re-renders.
  */
 export function withDemoFonts(program: IntermactProgram): IntermactProgram {
-  return async (ctx) => {
+  const cached = fontWrappedPrograms.get(program);
+  if (cached) return cached;
+
+  const wrapped: IntermactProgram = async (ctx) => {
     await loadDemoFonts(ctx);
     return program(ctx);
   };
+  fontWrappedPrograms.set(program, wrapped);
+  return wrapped;
 }
 
 export { dejavuSansUrl, dejavuSerifUrl };
